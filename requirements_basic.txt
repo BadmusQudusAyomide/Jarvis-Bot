@@ -1,0 +1,26 @@
+# Core Framework - Essential only
+flask
+flask-cors
+
+# AI & ML - Core only
+google-generativeai
+openai
+
+# Messaging Platforms
+python-telegram-bot
+requests
+
+# Document Processing - Basic
+PyPDF2
+
+# Web Scraping & APIs
+beautifulsoup4
+
+# Scheduling & Background Tasks
+apscheduler
+
+# Utilities
+python-dotenv
+
+# Development & Deployment
+gunicorn
