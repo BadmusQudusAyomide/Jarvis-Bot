@@ -21,7 +21,7 @@ python-docx==0.8.11
 pymupdf==1.23.0
 
 # Image Processing
-pillow==10.0.1
+pillow==11.0.0
 # opencv-python==4.8.1.78
 
 # Media Processing
