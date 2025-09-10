@@ -5,7 +5,30 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies for PyMuPDF, Pillow, pydub, and other libraries
-RUN apt-get update && apt-get install -y \\\n    build-essential \\\n    pkg-config \\\n    libfreetype6-dev \\\n    libjpeg-dev \\\n    libffi-dev \\\n    libssl-dev \\\n    zlib1g-dev \\\n    liblcms2-dev \\\n    libwebp-dev \\\n    libopenjp2-7-dev \\\n    libtiff5-dev \\\n    tcl8.6-dev \\\n    tk8.6-dev \\\n    python3-dev \\\n    swig \\\n    libmupdf-dev \\\n    libmujs-dev \\\n    libharfbuzz-dev \\\n    libjbig2dec0-dev \\\n    ffmpeg \\\n    libsndfile1 \\\n    libportaudio2 \\\n    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    pkg-config \
+    libfreetype6-dev \
+    libjpeg-dev \
+    libffi-dev \
+    libssl-dev \
+    zlib1g-dev \
+    liblcms2-dev \
+    libwebp-dev \
+    libopenjp2-7-dev \
+    libtiff5-dev \
+    tcl8.6-dev \
+    tk8.6-dev \
+    python3-dev \
+    swig \
+    libmupdf-dev \
+    libmujs-dev \
+    libharfbuzz-dev \
+    libjbig2dec0-dev \
+    ffmpeg \
+    libsndfile1 \
+    libportaudio2 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file first for better caching
 COPY requirements_new.txt .
