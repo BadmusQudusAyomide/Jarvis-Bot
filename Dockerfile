@@ -46,4 +46,4 @@ RUN mkdir -p data/documents/telegram_uploads data/knowledge_base
 EXPOSE $PORT
 
 # Command to run the application
-CMD gunicorn app:create_app() --bind 0.0.0.0:$PORT --config gunicorn.conf.py
+CMD ["gunicorn", "app:create_app()", "--bind", "0.0.0.0:$PORT", "--config", "gunicorn.conf.py"]
