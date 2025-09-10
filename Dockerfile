@@ -27,7 +27,10 @@ RUN apt-get update && apt-get install -y \
     libjbig2dec0-dev \
     ffmpeg \
     libsndfile1 \
-    libportaudio2 \\\n    espeak \\\n    libespeak1 \\\n    && rm -rf /var/lib/apt/lists/*
+    libportaudio2 \
+    espeak \
+    libespeak1 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file first for better caching
 COPY requirements_new.txt .
