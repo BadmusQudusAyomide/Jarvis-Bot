@@ -1,0 +1,200 @@
+2025-09-10T21:33:27.68345374Z ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2025-09-10T21:33:27.6834565Z File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+2025-09-10T21:33:27.68345954Z return _bootstrap._gcd_import(name[level:], package, level)
+2025-09-10T21:33:27.68346226Z ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2025-09-10T21:33:27.68346559Z File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+    2025-09-10T21:33:27.68346836Z File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+        2025-09-10T21:33:27.68347067Z File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+            2025-09-10T21:33:27.683473Z File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+                2025-09-10T21:33:27.68347578Z File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+                    2025-09-10T21:33:27.68347868Z File "<frozen importlib._bootstrap>", line 241, in
+                        _call_with_frames_removed
+                        2025-09-10T21:33:27.68348138Z File "/app/app.py", line 15, in <module>
+                            2025-09-10T21:33:27.68348436Z from core.scheduler import SchedulerManager
+                            2025-09-10T21:33:27.683487Z File "/app/core/scheduler.py", line 415
+                            2025-09-10T21:33:27.683492521Z minute=minute, second=0, microsecond=0)\n if reminder_time <
+                                now:\n reminder_time +=timedelta(days=1)\n self.create_reminder({\n 'user_id' :
+                                user_id,\n 'title' : 'Wake Up Reminder' ,\n 'description'
+                                : 'Have you woken up? Time to start the day!' ,\n 'reminder_time' :
+                                reminder_time.isoformat(),\n 'repeat_pattern' : 'daily' \n })
+                                2025-09-10T21:33:27.683514281Z ^ 2025-09-10T21:33:27.683517401Z SyntaxError: unexpected
+                                character after line continuation character 2025-09-10T21:34:18.960414481Z Traceback
+                                (most recent call last): 2025-09-10T21:34:18.960451472Z File "/usr/local/bin/gunicorn" ,
+                                line 8, in <module>
+                                2025-09-10T21:34:18.960456022Z sys.exit(run())
+                                2025-09-10T21:34:18.960459042Z ^^^^^
+                                2025-09-10T21:34:18.960462742Z File
+                                "/usr/local/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 67, in run
+                                2025-09-10T21:34:18.960466822Z WSGIApplication("%(prog)s [OPTIONS] [APP_MODULE]").run()
+                                2025-09-10T21:34:18.960469143Z File
+                                "/usr/local/lib/python3.11/site-packages/gunicorn/app/base.py", line 236, in run
+                                2025-09-10T21:34:18.960471632Z super().run()
+                                2025-09-10T21:34:18.960474183Z File
+                                "/usr/local/lib/python3.11/site-packages/gunicorn/app/base.py", line 72, in run
+                                2025-09-10T21:34:18.960476643Z Arbiter(self).run()
+                                2025-09-10T21:34:18.960478993Z ^^^^^^^^^^^^^
+                                2025-09-10T21:34:18.960481643Z File
+                                "/usr/local/lib/python3.11/site-packages/gunicorn/arbiter.py", line 58, in __init__
+                                2025-09-10T21:34:18.960494403Z self.setup(app)
+                                2025-09-10T21:34:18.960499763Z File
+                                "/usr/local/lib/python3.11/site-packages/gunicorn/arbiter.py", line 118, in setup
+                                2025-09-10T21:34:18.960687376Z self.app.wsgi()
+                                2025-09-10T21:34:18.960764778Z File
+                                "/usr/local/lib/python3.11/site-packages/gunicorn/app/base.py", line 67, in wsgi
+                                2025-09-10T21:34:18.960770678Z self.callable = self.load()
+                                2025-09-10T21:34:18.960773378Z ^^^^^^^^^^^
+                                2025-09-10T21:34:18.960775978Z File
+                                "/usr/local/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 58, in load
+                                2025-09-10T21:34:18.96088129Z return self.load_wsgiapp()
+                                2025-09-10T21:34:18.9608859Z ^^^^^^^^^^^^^^^^^^^
+                                2025-09-10T21:34:18.96088917Z File
+                                "/usr/local/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 48, in
+                                load_wsgiapp
+                                2025-09-10T21:34:18.960997593Z return util.import_app(self.app_uri)
+                                2025-09-10T21:34:18.961002133Z ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                2025-09-10T21:34:18.961005023Z File
+                                "/usr/local/lib/python3.11/site-packages/gunicorn/util.py", line 371, in import_app
+                                2025-09-10T21:34:18.961144955Z mod = importlib.import_module(module)
+                                2025-09-10T21:34:18.961150565Z ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                2025-09-10T21:34:18.961153556Z File "/usr/local/lib/python3.11/importlib/__init__.py",
+                                line 126, in import_module
+                                2025-09-10T21:34:18.961253897Z return _bootstrap._gcd_import(name[level:], package,
+                                level)
+                                2025-09-10T21:34:18.961258377Z ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                2025-09-10T21:34:18.961261447Z File "<frozen importlib._bootstrap>", line 1204, in
+                                    _gcd_import
+                                    2025-09-10T21:34:18.961267078Z File "<frozen importlib._bootstrap>", line 1176, in
+                                        _find_and_load
+                                        2025-09-10T21:34:18.961269658Z File "<frozen importlib._bootstrap>", line 1147,
+                                            in _find_and_load_unlocked
+                                            2025-09-10T21:34:18.961272058Z File "<frozen importlib._bootstrap>", line
+                                                690, in _load_unlocked
+                                                2025-09-10T21:34:18.961323519Z File "<frozen
+                                                    importlib._bootstrap_external>", line 940, in exec_module
+                                                    2025-09-10T21:34:18.961331729Z File "<frozen importlib._bootstrap>",
+                                                        line 241, in _call_with_frames_removed
+                                                        2025-09-10T21:34:18.961339569Z File "/app/app.py", line 15, in
+                                                        <module>
+                                                            2025-09-10T21:34:18.961607384Z from core.scheduler import
+                                                            SchedulerManager
+                                                            2025-09-10T21:34:18.961613724Z File
+                                                            "/app/core/scheduler.py", line 415
+                                                            2025-09-10T21:34:18.961617434Z minute=minute, second=0,
+                                                            microsecond=0)\n if reminder_time < now:\n reminder_time
+                                                                +=timedelta(days=1)\n self.create_reminder({\n 'user_id'
+                                                                : user_id,\n 'title' : 'Wake Up Reminder'
+                                                                ,\n 'description'
+                                                                : 'Have you woken up? Time to start the day!'
+                                                                ,\n 'reminder_time' :
+                                                                reminder_time.isoformat(),\n 'repeat_pattern' : 'daily'
+                                                                \n }) 2025-09-10T21:34:18.961659805Z ^
+                                                                2025-09-10T21:34:18.961663615Z SyntaxError: unexpected
+                                                                character after line continuation character
+                                                                2025-09-10T21:35:49.71758594Z Traceback (most recent
+                                                                call last): 2025-09-10T21:35:49.717622571Z
+                                                                File "/usr/local/bin/gunicorn" , line 8, in <module>
+                                                                2025-09-10T21:35:49.717651512Z sys.exit(run())
+                                                                2025-09-10T21:35:49.717659912Z ^^^^^
+                                                                2025-09-10T21:35:49.717664482Z File
+                                                                "/usr/local/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py",
+                                                                line 67, in run
+                                                                2025-09-10T21:35:49.717751364Z WSGIApplication("%(prog)s
+                                                                [OPTIONS] [APP_MODULE]").run()
+                                                                2025-09-10T21:35:49.717761024Z File
+                                                                "/usr/local/lib/python3.11/site-packages/gunicorn/app/base.py",
+                                                                line 236, in run
+                                                                2025-09-10T21:35:49.717874686Z super().run()
+                                                                2025-09-10T21:35:49.717879566Z File
+                                                                "/usr/local/lib/python3.11/site-packages/gunicorn/app/base.py",
+                                                                line 72, in run
+                                                                2025-09-10T21:35:49.717972068Z Arbiter(self).run()
+                                                                2025-09-10T21:35:49.717975628Z ^^^^^^^^^^^^^
+                                                                2025-09-10T21:35:49.717978688Z File
+                                                                "/usr/local/lib/python3.11/site-packages/gunicorn/arbiter.py",
+                                                                line 58, in __init__
+                                                                2025-09-10T21:35:49.718060649Z self.setup(app)
+                                                                2025-09-10T21:35:49.7180696Z File
+                                                                "/usr/local/lib/python3.11/site-packages/gunicorn/arbiter.py",
+                                                                line 118, in setup
+                                                                2025-09-10T21:35:49.718162282Z self.app.wsgi()
+                                                                2025-09-10T21:35:49.718166022Z File
+                                                                "/usr/local/lib/python3.11/site-packages/gunicorn/app/base.py",
+                                                                line 67, in wsgi
+                                                                2025-09-10T21:35:49.718247163Z self.callable =
+                                                                self.load()
+                                                                2025-09-10T21:35:49.718263463Z ^^^^^^^^^^^
+                                                                2025-09-10T21:35:49.718266643Z File
+                                                                "/usr/local/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py",
+                                                                line 58, in load
+                                                                2025-09-10T21:35:49.718385556Z return
+                                                                self.load_wsgiapp()
+                                                                2025-09-10T21:35:49.718397346Z ^^^^^^^^^^^^^^^^^^^
+                                                                2025-09-10T21:35:49.718400826Z File
+                                                                "/usr/local/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py",
+                                                                line 48, in load_wsgiapp
+                                                                2025-09-10T21:35:49.718477097Z return
+                                                                util.import_app(self.app_uri)
+                                                                2025-09-10T21:35:49.718494028Z
+                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                                                2025-09-10T21:35:49.718497728Z File
+                                                                "/usr/local/lib/python3.11/site-packages/gunicorn/util.py",
+                                                                line 371, in import_app
+                                                                2025-09-10T21:35:49.718637571Z mod =
+                                                                importlib.import_module(module)
+                                                                2025-09-10T21:35:49.718642031Z
+                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                                                2025-09-10T21:35:49.718643871Z File
+                                                                "/usr/local/lib/python3.11/importlib/__init__.py", line
+                                                                126, in import_module
+                                                                2025-09-10T21:35:49.718731342Z return
+                                                                _bootstrap._gcd_import(name[level:], package, level)
+                                                                2025-09-10T21:35:49.718757503Z
+                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                                                2025-09-10T21:35:49.718761073Z File "<frozen
+                                                                    importlib._bootstrap>", line 1204, in _gcd_import
+                                                                    2025-09-10T21:35:49.718763723Z File "<frozen
+                                                                        importlib._bootstrap>", line 1176, in
+                                                                        _find_and_load
+                                                                        2025-09-10T21:35:49.718766193Z File "<frozen
+                                                                            importlib._bootstrap>", line 1147, in
+                                                                            _find_and_load_unlocked
+                                                                            2025-09-10T21:35:49.718780773Z File "<frozen
+                                                                                importlib._bootstrap>", line 690, in
+                                                                                _load_unlocked
+                                                                                2025-09-10T21:35:49.718785043Z File "
+                                                                                <frozen importlib._bootstrap_external>",
+                                                                                    line 940, in exec_module
+                                                                                    2025-09-10T21:35:49.718787313Z File
+                                                                                    "<frozen importlib._bootstrap>",
+                                                                                        line 241, in
+                                                                                        _call_with_frames_removed
+                                                                                        2025-09-10T21:35:49.718789493Z
+                                                                                        File "/app/app.py", line 15, in
+                                                                                        <module>
+                                                                                            2025-09-10T21:35:49.718854715Z
+                                                                                            from core.scheduler import
+                                                                                            SchedulerManager
+                                                                                            2025-09-10T21:35:49.718865085Z
+                                                                                            File
+                                                                                            "/app/core/scheduler.py",
+                                                                                            line 415
+                                                                                            2025-09-10T21:35:49.718868545Z
+                                                                                            minute=minute, second=0,
+                                                                                            microsecond=0)\n if
+                                                                                            reminder_time < now:\n
+                                                                                                reminder_time
+                                                                                                +=timedelta(days=1)\n
+                                                                                                self.create_reminder({\n 'user_id'
+                                                                                                : user_id,\n 'title'
+                                                                                                : 'Wake Up Reminder'
+                                                                                                ,\n 'description'
+                                                                                                : 'Have you woken up? Time to start the day!'
+                                                                                                ,\n 'reminder_time' :
+                                                                                                reminder_time.isoformat(),\n 'repeat_pattern'
+                                                                                                : 'daily' \n })
+                                                                                                2025-09-10T21:35:49.718886285Z
+                                                                                                ^
+                                                                                                2025-09-10T21:35:49.718888525Z
+                                                                                                SyntaxError: unexpected
+                                                                                                character after line
+                                                                                                continuation character

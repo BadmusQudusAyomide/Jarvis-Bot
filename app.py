@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 import json
 from dotenv import load_dotenv
+import threading
 
 # Import core modules
 from core.database import DatabaseManager
@@ -79,7 +80,7 @@ class JarvisApp:
             try:
                 update_data = request.get_json()
                 if update_data:
-                    self.telegram.handle_update(update_data)
+                    threading.Thread(target=self.telegram.handle_update, args=(update_data,)).start()
                 return jsonify({'status': 'ok'})
             except Exception as e:
                 logger.error(f"Telegram webhook error: {e}")
@@ -94,7 +95,7 @@ class JarvisApp:
                     return self.whatsapp.verify_webhook(request)
                 else:
                     update_data = request.get_json()
-                    self.whatsapp.handle_update(update_data)
+                    threading.Thread(target=self.whatsapp.handle_update, args=(update_data,)).start()
                     return jsonify({'status': 'ok'})
             except Exception as e:
                 logger.error(f"WhatsApp webhook error: {e}")
