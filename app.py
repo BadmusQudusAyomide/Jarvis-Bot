@@ -93,8 +93,9 @@ class JarvisApp:
                     # Webhook verification
                     return self.whatsapp.verify_webhook(request)
                 else:
-                    # Handle incoming message
-                    return self.whatsapp.handle_message(request)
+                    update_data = request.get_json()
+                    self.whatsapp.handle_update(update_data)
+                    return jsonify({'status': 'ok'})
             except Exception as e:
                 logger.error(f"WhatsApp webhook error: {e}")
                 return jsonify({'error': str(e)}), 500
