@@ -10,3 +10,4 @@ pyttsx3==2.90
 beautifulsoup4==4.12.2
 pillow==10.0.1
 lxml==4.9.3
+PyMuPDF==1.22.5

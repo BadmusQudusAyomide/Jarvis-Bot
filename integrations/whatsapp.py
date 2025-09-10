@@ -354,7 +354,7 @@ class WhatsAppBot:
                     finally:
                         try:
                             if os.path.exists(file_path):
-                    os.remove(file_path)
+                                os.remove(file_path)
                         except Exception as cleanup_err:
                             logger.warning(f"Cleanup failed for {file_path}: {cleanup_err}")
                     return
@@ -424,15 +424,15 @@ class WhatsAppBot:
             # Prefer direct upload (most reliable for inline rendering)
             media_id = self._upload_media(file_path, "video")
             if media_id:
-            payload = {
-                "messaging_product": "whatsapp",
-                "to": sender,
-                "type": "video",
-                "video": {
-                    "id": media_id,
-                    "caption": "Here's the video you requested"
+                payload = {
+                    "messaging_product": "whatsapp",
+                    "to": sender,
+                    "type": "video",
+                    "video": {
+                        "id": media_id,
+                        "caption": "Here's the video you requested"
+                    }
                 }
-            }
                 response = requests.post(self.base_url, headers=self.headers, json=payload)
                 if response.status_code == 200:
                     logger.info(f"WhatsApp video (upload) sent successfully to {sender}")
@@ -441,7 +441,7 @@ class WhatsAppBot:
                     logger.error(f"Failed to send WhatsApp video (upload): {response.text}")
             else:
                 logger.error("Upload returned no media_id; will try link fallback")
-            
+
             # Fallback: send by public link if configured
             public_base = os.getenv('PUBLIC_BASE_URL')
             if public_base:
@@ -469,15 +469,14 @@ class WhatsAppBot:
                         "caption": "Here's the video you requested"
                     }
                 }
-            response = requests.post(self.base_url, headers=self.headers, json=payload)
-            if response.status_code == 200:
+                response = requests.post(self.base_url, headers=self.headers, json=payload)
+                if response.status_code == 200:
                     logger.info(f"WhatsApp video (link) sent successfully to {sender}: {link}")
-                return True
-            else:
+                    return True
+                else:
                     logger.error(f"Failed to send WhatsApp video by link: {response.text}")
-            
-                return False
-                
+                    return False
+            return False
         except Exception as e:
             logger.error(f"Error sending WhatsApp video: {e}")
             return False
@@ -494,17 +493,17 @@ class WhatsAppBot:
             document = message.get('document', {})
             filename = document.get('filename', '')
             document_id = document.get('id', '')
-            
+
             if not filename.lower().endswith('.pdf'):
                 self.send_text_message(
-                    sender, 
+                    sender,
                     "I can only process PDF documents. Please send a PDF file."
                 )
                 return
-            
+
             # Download document
             doc_file_path = self.download_media(document_id)
-            
+
             if doc_file_path:
                 try:
                     # Summarize
@@ -514,14 +513,14 @@ class WhatsAppBot:
                         f"📄 Summary of {filename}:\n\n{summary}"
                     )
                 finally:
-                # Clean up downloaded file
+                    # Clean up downloaded file
                     try:
-                os.unlink(doc_file_path)
+                        os.unlink(doc_file_path)
                     except Exception:
                         pass
             else:
                 self.send_text_message(sender, "Sorry, I had trouble downloading your document.")
-            
+
         except Exception as e:
             logger.error(f"Error handling WhatsApp document: {e}")
             self.send_text_message(sender, "Sorry, I had trouble processing your document.")
