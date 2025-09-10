@@ -85,41 +85,7 @@ class YouTubeDownloader:
             if height:
                 format_selector = f'bv*[height<={height}]+ba/b[height<={height}]'
 
-            # Instagram and TikTok often don't expose clean height-filtered formats; use more permissive selector
-            if 'instagram.com' in domain or 'instagr.am' in domain or 'tiktok.com' in domain or 'vm.tiktok.com' in domain:
-                format_selector = 'b[ext=mp4]/b/best'
-
-            ydl_opts = {
-                'format': format_selector,
-                'outtmpl': os.path.join(self.download_dir, '%(title)s.%(ext)s'),
-                'merge_output_format': 'mp4',
-                'postprocessors': [{
-                    'key': 'FFmpegVideoConvertor',
-                    'preferedformat': 'mp4',
-                }],
-                'noplaylist': True,
-                'quiet': False,
-                'no_warnings': False,
-            }
-
-            # Set headers to improve extraction reliability
-            ydl_opts['http_headers'] = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
-                'Referer': url
-            }
-
-            # Optional Instagram cookies support (set INSTAGRAM_SESSIONID or INSTAGRAM_COOKIES path)
-            import os as _os
-            ig_cookie_path = _os.getenv('INSTAGRAM_COOKIES')
-            ig_sessionid = _os.getenv('INSTAGRAM_SESSIONID')
-            if ('instagram.com' in domain or 'instagr.am' in domain):
-                if ig_cookie_path and _os.path.exists(ig_cookie_path):
-                    ydl_opts['cookiefile'] = ig_cookie_path
-                elif ig_sessionid:
-                    # Minimal cookie jar using sessionid; works for some endpoints
-                    ydl_opts.setdefault('cookies', []).append({'domain': '.instagram.com', 'name': 'sessionid', 'value': ig_sessionid})
-            
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Instagram, TikTok, and Facebook often don't expose clean height-filtered formats; use more permissive selector\n            if 'instagram.com' in domain or 'instagr.am' in domain or 'tiktok.com' in domain or 'vm.tiktok.com' in domain or 'facebook.com' in domain or 'fb.watch' in domain or 'm.facebook.com' in domain:\n                format_selector = 'b[ext=mp4]/b/best'\n\n            ydl_opts = {\n                'format': format_selector,\n                'outtmpl': os.path.join(self.download_dir, '%(title)s.%(ext)s'),\n                'merge_output_format': 'mp4',\n                'postprocessors': [{\n                    'key': 'FFmpegVideoConvertor',\n                    'preferedformat': 'mp4',\n                }],\n                'noplaylist': True,\n                'quiet': False,\n                'no_warnings': False,\n            }\n\n            # Set headers to improve extraction reliability\n            ydl_opts['http_headers'] = {\n                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',\n                'Referer': url\n            }\n\n            # Optional cookies support\n            import os as _os\n            ig_cookie_path = _os.getenv('INSTAGRAM_COOKIES')\n            ig_sessionid = _os.getenv('INSTAGRAM_SESSIONID')\n            fb_cookie_path = _os.getenv('FACEBOOK_COOKIES')\n            fb_sessionid = _os.getenv('FACEBOOK_SESSIONID')\n\n            if 'instagram.com' in domain or 'instagr.am' in domain:\n                if ig_cookie_path and _os.path.exists(ig_cookie_path):\n                    ydl_opts['cookiefile'] = ig_cookie_path\n                elif ig_sessionid:\n                    # Minimal cookie jar using sessionid; works for some endpoints\n                    ydl_opts.setdefault('cookiesfrombrowser', []).append(('instagram', None, None, None))\n                    # Alternatively, manual cookie\n                    ydl_opts.setdefault('cookies', []).append({'domain': '.instagram.com', 'name': 'sessionid', 'value': ig_sessionid})\n\n            if 'facebook.com' in domain or 'fb.watch' in domain or 'm.facebook.com' in domain:\n                if fb_cookie_path and _os.path.exists(fb_cookie_path):\n                    ydl_opts['cookiefile'] = fb_cookie_path\n                elif fb_sessionid:\n                    ydl_opts.setdefault('cookies', []).append({'domain': '.facebook.com', 'name': 'c_user', 'value': fb_sessionid})  # Note: Facebook uses multiple cookies; this is basic\n\n            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 filename = ydl.prepare_filename(info)
                 

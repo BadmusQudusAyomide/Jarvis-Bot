@@ -439,6 +439,22 @@ class JarvisAssistant:
                 else:
                     return f"❌ Failed to download {media_type} from YouTube. Please check the URL and try again."
         
+        # Facebook Reels Download
+        if any(keyword in message_lower for keyword in ['download', 'facebook', 'reel', 'video', 'audio']):
+            url_match = re.search(r'(https?://(?:www\.)?facebook\.com/reel/\d+|https?://(?:www\.)?facebook\.com/.*/videos/\d+|https?://fb\.watch/[a-zA-Z0-9_-]+)/?', message)
+            if url_match:
+                url = url_match.group(1)
+                media_type = 'audio' if 'audio' in message_lower else 'video'
+                
+                from .ai_engine import AIEngine
+                ai_engine = AIEngine()
+                result = ai_engine.download_media(url, media_type)
+                
+                if result:
+                    return f"✅ Successfully downloaded {media_type} from Facebook!\n📁 Saved to: {result}"
+                else:
+                    return f"❌ Failed to download {media_type} from Facebook. Please check the URL and try again."
+
         # Text analysis
         if message_lower.startswith('analyze text:'):
             text_to_analyze = message[13:].strip()

@@ -368,3 +368,22 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Database health check failed: {e}")
             return False
+
+    def get_user_reminders(self, user_id: int, active_only: bool = True) -> List[Dict]:
+        """Get reminders for a specific user."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            query = '''
+                SELECT * FROM reminders 
+                WHERE user_id = ?
+            '''
+            params = [user_id]
+            
+            if active_only:
+                query += ' AND is_active = 1 AND is_completed = 0'
+            
+            query += ' ORDER BY reminder_time ASC'
+            
+            cursor.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]

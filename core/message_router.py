@@ -11,9 +11,10 @@ class MessageRouter:
     Handles message processing, context management, and response generation.
     """
     
-    def __init__(self, database_manager, ai_engine):
+    def __init__(self, database_manager, ai_engine, scheduler):
         self.db = database_manager
         self.ai = ai_engine
+        self.scheduler = scheduler
         
         # Command handlers
         self.command_handlers = {
@@ -23,6 +24,7 @@ class MessageRouter:
             'clear': self._handle_clear_context,
             'documents': self._handle_list_documents,
             'reminders': self._handle_list_reminders,
+            'setreminder': self._handle_set_reminder,
             'stats': self._handle_stats
         }
         
@@ -447,6 +449,46 @@ Available settings:
             'content': '📅 Reminder management coming soon!',
             'success': True
         }
+    
+    def _handle_set_reminder(self, user: Dict, content: str) -> Dict:
+        """Handle set reminder command."""
+        import re
+        from dateutil.parser import parse
+        try:
+            # Parse command: /setreminder <time> <title> [description] [repeat]
+            # Example: /setreminder 10pm sleep early daily
+            parts = re.split(r'\s+', content[13:].strip())  # Remove /setreminder
+            if len(parts) < 2:
+                return {'type': 'text', 'content': 'Usage: /setreminder <time> <message> [repeat]', 'success': False}
+            
+            time_str = parts[0]
+            message = ' '.join(parts[1:])
+            repeat = None
+            if message.lower().endswith(('daily', 'weekly', 'monthly')):
+                last_word = message.split()[-1].lower()
+                if last_word in ('daily', 'weekly', 'monthly'):
+                    repeat = last_word
+                    message = ' '.join(message.split()[:-1])
+            
+            # Parse time (simple: assume HH or HH:MM, PM/AM)
+            parsed_time = parse(time_str, fuzzy=True)
+            if parsed_time.time() < datetime.now().time():
+                parsed_time += timedelta(days=1)
+            
+            result = self.scheduler.create_reminder({
+                'user_id': user['id'],
+                'title': message,
+                'description': '',
+                'reminder_time': parsed_time.isoformat(),
+                'repeat_pattern': repeat
+            })
+            
+            if result['success']:
+                return {'type': 'text', 'content': result['message'], 'success': True}
+            else:
+                return {'type': 'text', 'content': result['error'], 'success': False}
+        except Exception as e:
+            return {'type': 'text', 'content': f'Error setting reminder: {str(e)}', 'success': False}
     
     def _handle_stats(self, user: Dict, content: str) -> Dict:
         """Handle stats command."""
