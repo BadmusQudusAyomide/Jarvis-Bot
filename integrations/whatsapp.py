@@ -204,7 +204,7 @@ class WhatsAppBot:
             if message_text.lower().startswith('/'):
                 self._handle_command(sender, message_text)
                 return
-
+            
             # Natural language reminders: "Remind me to <title> at YYYY-MM-DD HH:MM"
             try:
                 import re
@@ -354,7 +354,7 @@ class WhatsAppBot:
                     finally:
                         try:
                             if os.path.exists(file_path):
-                                os.remove(file_path)
+                    os.remove(file_path)
                         except Exception as cleanup_err:
                             logger.warning(f"Cleanup failed for {file_path}: {cleanup_err}")
                     return
@@ -424,15 +424,15 @@ class WhatsAppBot:
             # Prefer direct upload (most reliable for inline rendering)
             media_id = self._upload_media(file_path, "video")
             if media_id:
-                payload = {
-                    "messaging_product": "whatsapp",
-                    "to": sender,
-                    "type": "video",
-                    "video": {
-                        "id": media_id,
-                        "caption": "Here's the video you requested"
-                    }
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": sender,
+                "type": "video",
+                "video": {
+                    "id": media_id,
+                    "caption": "Here's the video you requested"
                 }
+            }
                 response = requests.post(self.base_url, headers=self.headers, json=payload)
                 if response.status_code == 200:
                     logger.info(f"WhatsApp video (upload) sent successfully to {sender}")
@@ -469,14 +469,14 @@ class WhatsAppBot:
                         "caption": "Here's the video you requested"
                     }
                 }
-                response = requests.post(self.base_url, headers=self.headers, json=payload)
-                if response.status_code == 200:
+            response = requests.post(self.base_url, headers=self.headers, json=payload)
+            if response.status_code == 200:
                     logger.info(f"WhatsApp video (link) sent successfully to {sender}: {link}")
-                    return True
-                else:
+                return True
+            else:
                     logger.error(f"Failed to send WhatsApp video by link: {response.text}")
             
-            return False
+                return False
                 
         except Exception as e:
             logger.error(f"Error sending WhatsApp video: {e}")
@@ -514,9 +514,9 @@ class WhatsAppBot:
                         f"📄 Summary of {filename}:\n\n{summary}"
                     )
                 finally:
-                    # Clean up downloaded file
+                # Clean up downloaded file
                     try:
-                        os.unlink(doc_file_path)
+                os.unlink(doc_file_path)
                     except Exception:
                         pass
             else:
@@ -696,7 +696,7 @@ All systems operational! 🚀"""
         try:
             app = Flask(__name__)
             CORS(app)
-
+            
             # Start scheduler on server start to enable reminders
             try:
                 self.db = DatabaseManager()
