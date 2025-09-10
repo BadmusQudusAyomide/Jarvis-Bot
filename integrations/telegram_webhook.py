@@ -67,51 +67,7 @@ class TelegramWebhook:
                 return
             
             # Add user info
-        message_data['user_info'] = {
-            'username': user.get('username'),
-            'first_name': user.get('first_name'),
-            'last_name': user.get('last_name')
-        }
-        
-        # Check for YouTube links
-        if message_data['type'] == 'text':
-            text = message_data['content']
-            youtube_patterns = [r'youtube\\.com', r'youtu\\.be', r'm\\.youtube\\.com']
-            if any(re.search(pattern, text, re.IGNORECASE) for pattern in youtube_patterns):
-                try:
-                    # Extract URL
-                    url_match = re.search(r'https?://\\S+', text)
-                    if url_match:
-                        url = url_match.group(0)
-                        downloader = YouTubeDownloader()
-                        video_path = downloader.download_video(url)
-                        
-                        if video_path:
-                            success = self._send_video_message(chat['id'], video_path, "Downloaded YouTube video")
-                            if success:
-                                os.remove(video_path)
-                            else:
-                                os.remove(video_path)
-                                self._send_text_message(chat['id'], "Failed to send the video.")
-                        else:
-                            self._send_text_message(chat['id'], "Failed to download the video.")
-                    else:
-                        self._send_text_message(chat['id'], "No valid URL found in the message.")
-                    
-                    return  # Don't process further
-                    
-                except Exception as e:
-                    logger.error(f"Error handling YouTube link: {e}")
-                    self._send_text_message(chat['id'], f"Error downloading video: {str(e)}")
-                    return
-        
-        # Process through message router
-        response = self.message_router.process_message(
-            platform='telegram',
-            platform_user_id=user_id,
-            message_data=message_data
-        )
-            
+            message_data['user_info'] = {\n            'username': user.get('username'),\n            'first_name': user.get('first_name'),\n            'last_name': user.get('last_name')\n        }\n\n        # Check for YouTube links\n        if message_data['type'] == 'text':\n            text = message_data['content']\n            youtube_patterns = [r'youtube\\.com', r'youtu\\.be', r'm\\.youtube\\.com']\n            if any(re.search(pattern, text, re.IGNORECASE) for pattern in youtube_patterns):\n                try:\n                    # Extract URL\n                    url_match = re.search(r'https?://\\S+', text)\n                    if url_match:\n                        url = url_match.group(0)\n                        downloader = YouTubeDownloader()\n                        video_path = downloader.download_video(url)\n                        \n                        if video_path:\n                            success = self._send_video_message(chat['id'], video_path, "Downloaded YouTube video")\n                            if success:\n                                os.remove(video_path)\n                            else:\n                                os.remove(video_path)\n                                self._send_text_message(chat['id'], "Failed to send the video.")\n                        else:\n                            self._send_text_message(chat['id'], "Failed to download the video.")\n                    else:\n                        self._send_text_message(chat['id'], "No valid URL found in the message.")\n                    \n                    return  # Don't process further\n                \n                except Exception as e:\n                    logger.error(f"Error handling YouTube link: {e}")\n                    self._send_text_message(chat['id'], f"Error downloading video: {str(e)}")\n                    return\n        \n        # Process through message router\n        response = self.message_router.process_message(\n            platform='telegram',\n            platform_user_id=user_id,\n            message_data=message_data\n        )\n        # Send response back to Telegram\n        if response.get('success', True):\n            self._send_response(chat['id'], response)\n    \n    except Exception as e:\n        logger.error(f"Error processing Telegram message: {e}")\n    
             # Send response back to Telegram
             if response.get('success', True):
                 self._send_response(chat['id'], response)
