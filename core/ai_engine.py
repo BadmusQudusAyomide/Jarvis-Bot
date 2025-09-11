@@ -99,7 +99,63 @@ class AIEngine:
         
         logger.info(f"AI Engine initialized with {self.llm_provider}")
     
-    def generate_response(self, prompt: str, context: Dict = None, max_tokens: int = 1000) -> str:\n    """\n    Generate AI response using configured LLM.\n    \n    Args:\n        prompt (str): User prompt\n        context (Dict): Additional context\n        max_tokens (int): Maximum response tokens\n        \n    Returns:\n        str: Generated response\n    """\n    try:\n        # Build full prompt with context\n        full_prompt = self._build_prompt_with_context(prompt, context)\n        \n        if self.llm_provider == 'gemini':\n            # Try each Gemini key until success\n            last_err = None\n            for key in self.gemini_keys:\n                try:\n                    genai.configure(api_key=key)\n                    model = genai.GenerativeModel('gemini-1.5-flash')\n                    response = model.generate_content(full_prompt)\n                    return response.text.strip()\n                except Exception as e:\n                    last_err = e\n                    continue\n            # Fallback to OpenAI if available\n            if self.openai_api_key:\n                response = openai.ChatCompletion.create(\n                    model="gpt-3.5-turbo",\n                    messages=[\n                        {"role": "system", "content": "You are Jarvis, an intelligent AI assistant."},\n                        {"role": "user", "content": full_prompt}\n                    ],\n                    max_tokens=max_tokens,\n                    temperature=0.7\n                )\n                return response.choices[0].message.content.strip()\n            raise last_err or RuntimeError("Gemini request failed")\n        \n        elif self.llm_provider == 'openai':\n            response = openai.ChatCompletion.create(\n                model="gpt-3.5-turbo",\n                messages=[\n                    {"role": "system", "content": "You are Jarvis, an intelligent AI assistant."},\n                    {"role": "user", "content": full_prompt}\n                ],\n                max_tokens=max_tokens,\n                temperature=0.7\n            )\n            return response.choices[0].message.content.strip()\n        \n    except Exception as e:\n        logger.error(f"Error generating response: {e}")\n        return "I apologize, but I'm having trouble processing your request right now. Please try again."
+    def generate_response(self, prompt: str, context: Dict = None, max_tokens: int = 1000) -> str:
+        """
+        Generate AI response using configured LLM.
+        
+        Args:
+            prompt (str): User prompt
+            context (Dict): Additional context
+            max_tokens (int): Maximum response tokens
+            
+        Returns:
+            str: Generated response
+        """
+        try:
+            # Build full prompt with context
+            full_prompt = self._build_prompt_with_context(prompt, context)
+            
+            if self.llm_provider == 'gemini':
+                # Try each Gemini key until success
+                last_err = None
+                for key in self.gemini_keys:
+                    try:
+                        genai.configure(api_key=key)
+                        model = genai.GenerativeModel('gemini-1.5-flash')
+                        response = model.generate_content(full_prompt)
+                        return response.text.strip()
+                    except Exception as e:
+                        last_err = e
+                        continue
+                # Fallback to OpenAI if available
+                if self.openai_api_key:
+                    response = openai.ChatCompletion.create(
+                        model="gpt-3.5-turbo",
+                        messages=[
+                            {"role": "system", "content": "You are Jarvis, an intelligent AI assistant."},
+                            {"role": "user", "content": full_prompt}
+                        ],
+                        max_tokens=max_tokens,
+                        temperature=0.7
+                    )
+                    return response.choices[0].message.content.strip()
+                raise last_err or RuntimeError("Gemini request failed")
+            
+            elif self.llm_provider == 'openai':
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are Jarvis, an intelligent AI assistant."},
+                        {"role": "user", "content": full_prompt}
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=0.7
+                )
+                return response.choices[0].message.content.strip()
+            
+        except Exception as e:
+            logger.error(f"Error generating response: {e}")
+            return "I apologize, but I'm having trouble processing your request right now. Please try again."
     
     def _build_prompt_with_context(self, prompt: str, context: Dict = None) -> str:
         """Build prompt with relevant context."""
