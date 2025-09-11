@@ -67,7 +67,17 @@ I'm your intelligent AI assistant, ready to help you with various tasks.
 Just send me a message or voice note to get started! 🚀
         """
         
-        chat_id = str(update.effective_chat.id)\n        tg_user = update.effective_user\n        user = self.db.get_or_create_user(\n            platform_id=chat_id,\n            platform='telegram',\n            username=getattr(tg_user, 'username', None),\n            first_name=getattr(tg_user, 'first_name', None),\n            last_name=getattr(tg_user, 'last_name', None)\n        )\n        self.scheduler_manager.setup_daily_reminders(user['id'])\n        await update.message.reply_text(welcome_message, parse_mode='Markdown')
+        chat_id = str(update.effective_chat.id)
+        tg_user = update.effective_user
+        user = self.db.get_or_create_user(
+            platform_id=chat_id,
+            platform='telegram',
+            username=getattr(tg_user, 'username', None),
+            first_name=getattr(tg_user, 'first_name', None),
+            last_name=getattr(tg_user, 'last_name', None)
+        )
+        self.scheduler_manager.setup_daily_reminders(user['id'])
+        await update.message.reply_text(welcome_message, parse_mode='Markdown')
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """

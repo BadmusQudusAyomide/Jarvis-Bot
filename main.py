@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
 
-from integrations.telegram import TelegramBot
+from integrations.telegram_bot import TelegramBot
 from integrations.whatsapp import WhatsAppBot
 
 # Load environment variables
