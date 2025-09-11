@@ -42,7 +42,7 @@ class JarvisApp:
         # Initialize core components
         self.db = DatabaseManager()
         self.ai_engine = AIEngine()
-        self.message_router = MessageRouter(self.db, self.ai_engine)
+        self.message_router = MessageRouter(self.db, self.ai_engine, self.scheduler)
         self.scheduler = SchedulerManager(self.db)
         
         # Initialize integrations
