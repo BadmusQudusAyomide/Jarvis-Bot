@@ -512,3 +512,4 @@ Keep chatting to unlock more insights! 🚀
             'content': stats_text,
             'success': True
         }
+
