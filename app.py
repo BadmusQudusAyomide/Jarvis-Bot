@@ -42,8 +42,8 @@ class JarvisApp:
         # Initialize core components
         self.db = DatabaseManager()
         self.ai_engine = AIEngine()
-        self.message_router = MessageRouter(self.db, self.ai_engine, self.scheduler)
         self.scheduler = SchedulerManager(self.db)
+        self.message_router = MessageRouter(self.db, self.ai_engine, self.scheduler)
         
         # Initialize integrations
         self.telegram = TelegramWebhook(self.message_router)
