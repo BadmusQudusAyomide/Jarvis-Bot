@@ -412,39 +412,4 @@ class SchedulerManager:
             logger.error(f"Error getting job stats: {e}")
             return {'total_jobs': 0, 'running': False, 'uptime': 'Unknown'}
 
-    def setup_daily_reminders(self, user_id: int):
-        sleep_times = [
-            (22, 0),  # 10pm
-            (23, 0),  # 11pm
-            (0, 0),   # 12am
-            (1, 0)    # 1am
-        ]
-        wake_times = [
-            (5, 0),   # 5am
-            (6, 0),   # 6am
-            (7, 0),   # 7am
-            (8, 0)    # 8am
-        ]
-        now = datetime.now()
-        for hour, minute in sleep_times:
-            reminder_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-            if reminder_time < now:
-                reminder_time += timedelta(days=1)
-            self.create_reminder({
-                'user_id': user_id,
-                'title': 'Sleep Reminder',
-                'description': 'You should sleep early!',
-                'reminder_time': reminder_time.isoformat(),
-                'repeat_pattern': 'daily'
-            })
-        for hour, minute in wake_times:
-            reminder_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-            if reminder_time < now:
-                reminder_time += timedelta(days=1)
-            self.create_reminder({
-                'user_id': user_id,
-                'title': 'Wake Up Reminder',
-                'description': 'Have you woken up? Time to start the day!',
-                'reminder_time': reminder_time.isoformat(),
-                'repeat_pattern': 'daily'
-            })
+    def setup_default_reminders(self, user_id: int):\n        \"\"\"Setup default daily sleep and wake-up reminders for the user.\"\"\"\n        from datetime import datetime\n        sleep_times = [\"22:00\", \"23:00\", \"00:00\", \"01:00\"]\n        wake_times = [\"05:00\", \"06:00\", \"07:00\", \"08:00\"]\n\n        for time_str in sleep_times:\n            hour, minute = map(int, time_str.split(':'))\n            reminder_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)\n            if reminder_time < datetime.now():\n                reminder_time += timedelta(days=1)\n            reminder_data = {\n                'user_id': user_id,\n                'title': 'Time to sleep',\n                'description': 'Reminder to go to bed',\n                'reminder_time': reminder_time.isoformat(),\n                'repeat_pattern': 'daily'\n            }\n            self.create_reminder(reminder_data)\n\n        for time_str in wake_times:\n            hour, minute = map(int, time_str.split(':'))\n            reminder_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)\n            if reminder_time < datetime.now():\n                reminder_time += timedelta(days=1)\n            reminder_data = {\n                'user_id': user_id,\n                'title': 'Time to wake up',\n                'description': 'Reminder to wake up',\n                'reminder_time': reminder_time.isoformat(),\n                'repeat_pattern': 'daily'\n            }\n            self.create_reminder(reminder_data)

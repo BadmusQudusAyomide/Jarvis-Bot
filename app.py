@@ -53,9 +53,7 @@ class JarvisApp:
         self._setup_routes()
         
         # Start scheduler
-        self.scheduler.start()
-        
-        logger.info("Jarvis application initialized successfully")
+        self.scheduler.start()\n        self.scheduler.setup_default_reminders(1)  # Setup default reminders for default user ID 1\n        logger.info(\"Jarvis application initialized successfully\")
     
     def _setup_routes(self):
         """Setup Flask routes for webhooks and API endpoints."""
