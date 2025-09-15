@@ -20,6 +20,8 @@ pillow==10.0.1
 
 yt-dlp==2024.8.6
 
+pydub==0.25.1
+
 # Web Scraping & APIs
 beautifulsoup4==4.12.2
 lxml==4.9.3
