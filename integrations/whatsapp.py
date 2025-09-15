@@ -210,14 +210,21 @@ class WhatsAppBot:
             # Natural language reminders: "Remind me to <title> at YYYY-MM-DD HH:MM"
             try:
                 import re
-                m1 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(today|tomorrow)\s+at\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)', message_text, re.IGNORECASE)
-                m2 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)\b', message_text, re.IGNORECASE)
-                m3 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(\d{4}-\d{1,2}-\d{1,2})\s+(\d{1,2}:\d{2})', message_text, re.IGNORECASE)
+                # Strip chat export prefixes like "[9/15, 1:16 PM] Name: "
+                cleaned = re.sub(r'^\[[^\]]+\]\s*[^:]*:\s*', '', message_text).strip()
+                m1 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(today|tomorrow)\s+at\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)', cleaned, re.IGNORECASE)
+                # time-first variant: "by 1:30pm today"
+                m1b = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)\s+(today|tomorrow)\b', cleaned, re.IGNORECASE)
+                m2 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)\b', cleaned, re.IGNORECASE)
+                m3 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(\d{4}-\d{1,2}-\d{1,2})\s+(\d{1,2}:\d{2})', cleaned, re.IGNORECASE)
                 title = None
                 time_tuple = None
                 if m1:
                     title = m1.group(1).strip()
                     time_tuple = (m1.group(2).lower(), m1.group(3).strip())
+                elif m1b:
+                    title = m1b.group(1).strip()
+                    time_tuple = (m1b.group(3).lower(), m1b.group(2).strip())
                 elif m2:
                     title = m2.group(1).strip()
                     time_tuple = (None, m2.group(2).strip())
