@@ -838,13 +838,55 @@ Need more help? Just ask me anything! 💡"""
             app = Flask(__name__)
             CORS(app)
             
-            # Start scheduler on server start to enable reminders
+            # Start scheduler on server start to enable reminders and periodic jobs
             try:
                 self.db = DatabaseManager()
                 self.scheduler_manager = SchedulerManager(self.db)
                 self.scheduler_manager.start()
             except Exception as e:
                 logger.error(f"Failed to start WhatsApp scheduler: {e}")
+
+            # Schedule auto email summaries every 15 minutes for WhatsApp users
+            try:
+                from apscheduler.triggers.interval import IntervalTrigger
+                def email_digest_job():
+                    try:
+                        # Get or create user preferences holder for the WhatsApp number configured via env
+                        target_number = os.getenv('WHATSAPP_DIGEST_TO')
+                        if not target_number:
+                            return
+                        user = self.db.get_or_create_user(platform_id=target_number, platform='whatsapp', username=target_number)
+                        prefs = self.db.get_user_preferences(user['id'])
+                        last_since = prefs.get('email_last_since')
+                        from core.email_agent import EmailAgent
+                        agent = EmailAgent()
+                        from datetime import datetime, timedelta
+                        if not last_since:
+                            # default to today
+                            since_lit = agent.to_imap_since(datetime.now())
+                        else:
+                            since_lit = last_since
+                        emails = agent.fetch_new_since(since_lit)
+                        if not emails:
+                            return
+                        # Summarize and send
+                        summary = agent.summarize_emails(emails)
+                        self.send_text_message(target_number, f"📬 Email digest:\n\n{summary}")
+                        # Update last_since to today to avoid duplicates
+                        prefs['email_last_since'] = agent.to_imap_since(datetime.now())
+                        self.db.update_user_preferences(user['id'], prefs)
+                    except Exception as e:
+                        logger.error(f"Email digest job error: {e}")
+
+                # add job (every 15 minutes)
+                self.scheduler_manager.scheduler.add_job(
+                    func=email_digest_job,
+                    trigger=IntervalTrigger(minutes=15),
+                    id='whatsapp_email_digest',
+                    replace_existing=True
+                )
+            except Exception as e:
+                logger.error(f"Failed to schedule email digest: {e}")
             
             # Optional: serve media files publicly for link sending
             @app.route('/media/<path:filename>', methods=['GET'])

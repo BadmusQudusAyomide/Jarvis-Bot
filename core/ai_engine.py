@@ -74,24 +74,27 @@ class AIEngine:
         else:
             raise ValueError("No LLM API key found. Set GEMINI_API_KEY/GEMINI_API_KEYS or OPENAI_API_KEY")
         
-        # Initialize embeddings model
-        if HAS_SENTENCE_TRANSFORMERS:
-            try:
-                self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-            except Exception as e:
-                logger.warning(f"Failed to load sentence transformer: {e}")
-                self.embedding_model = None
-        else:
-            logger.warning("Sentence transformers not available. Semantic search disabled.")
-            self.embedding_model = None
+        # Initialize embeddings model (can be disabled via env)
+        self.embedding_model = None
+        if os.getenv('DISABLE_EMBEDDINGS', 'false').lower() not in ('1', 'true', 'yes'):
+            if HAS_SENTENCE_TRANSFORMERS:
+                try:
+                    self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+                except Exception as e:
+                    logger.warning(f"Failed to load sentence transformer: {e}")
+                    self.embedding_model = None
+            else:
+                logger.warning("Sentence transformers not available. Semantic search disabled.")
         
-        # Initialize Whisper for speech-to-text
-        try:
-            self.whisper_model = whisper.load_model("base")
-            logger.info("Whisper model loaded successfully")
-        except Exception as e:
-            logger.error(f"Failed to load Whisper model: {e}")
-            self.whisper_model = None
+        # Initialize Whisper for speech-to-text (can be disabled via env)
+        self.whisper_model = None
+        if os.getenv('DISABLE_WHISPER', 'false').lower() not in ('1', 'true', 'yes'):
+            try:
+                self.whisper_model = whisper.load_model("base")
+                logger.info("Whisper model loaded successfully")
+            except Exception as e:
+                logger.error(f"Failed to load Whisper model: {e}")
+                self.whisper_model = None
         
         # Document storage
         self.documents_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'documents')

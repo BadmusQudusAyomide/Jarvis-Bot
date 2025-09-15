@@ -32,11 +32,12 @@ RUN apt-get update && apt-get install -y \
     libespeak1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file first for better caching
-COPY requirements_new.txt .
+# Copy requirements file first for better caching (use a slim set for deploy)
+ARG REQS_FILE=requirements_minimal.txt
+COPY ${REQS_FILE} /app/requirements.txt
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements_new.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy the rest of the application
 COPY . .
@@ -44,8 +45,13 @@ COPY . .
 # Create necessary directories if they don't exist
 RUN mkdir -p data/documents/telegram_uploads data/knowledge_base
 
-# Expose the port the app runs on
-EXPOSE $PORT
+# Expose the port the app runs on (Render sets PORT env)
+ENV PORT=5000
+EXPOSE 5000
 
-# Command to run the application
-CMD gunicorn 'app:create_app()' --bind 0.0.0.0:$PORT --config gunicorn.conf.py
+# Default to disabling heavy models in container
+ENV DISABLE_EMBEDDINGS=true
+ENV DISABLE_WHISPER=true
+
+# Command to run the application (Flask app factory)
+CMD gunicorn app:create_app --bind 0.0.0.0:$PORT --timeout 120

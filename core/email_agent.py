@@ -63,6 +63,47 @@ class EmailAgent:
                 pass
             M.logout()
 
+    def fetch_new_since(self, since_internaldate: Optional[str]) -> List[Dict]:
+        """Fetch emails newer than an IMAP INTERNALDATE literal (e.g., 01-Jan-2025). If None, returns last 5."""
+        if not since_internaldate:
+            return self.fetch_recent_emails(limit=5)
+        M = self._connect()
+        try:
+            typ, data = M.search(None, f'(SINCE "{since_internaldate}")')
+            if typ != 'OK':
+                return []
+            ids = data[0].split()
+            ids = ids[::-1]
+            results = []
+            for msg_id in ids:
+                typ, msg_data = M.fetch(msg_id, '(RFC822 INTERNALDATE)')
+                if typ != 'OK':
+                    continue
+                msg = email.message_from_bytes(msg_data[0][1])
+                subject = self._decode_header(msg.get('Subject', ''))
+                from_ = self._decode_header(msg.get('From', ''))
+                date_ = msg.get('Date', '')
+                body_text = self._extract_text(msg)
+                results.append({
+                    'id': msg_id.decode('utf-8', errors='ignore'),
+                    'from': from_,
+                    'subject': subject,
+                    'date': date_,
+                    'snippet': (body_text or '')[:1000]
+                })
+            return results
+        finally:
+            try:
+                M.close()
+            except Exception:
+                pass
+            M.logout()
+
+    @staticmethod
+    def to_imap_since(dt: datetime) -> str:
+        """Convert datetime to IMAP SINCE date literal (e.g., 01-Jan-2025)."""
+        return dt.strftime('%d-%b-%Y')
+
     def summarize_emails(self, emails: List[Dict]) -> str:
         if not emails:
             return 'No recent emails found.'
