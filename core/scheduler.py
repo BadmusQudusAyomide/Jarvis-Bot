@@ -412,4 +412,96 @@ class SchedulerManager:
             logger.error(f"Error getting job stats: {e}")
             return {'total_jobs': 0, 'running': False, 'uptime': 'Unknown'}
 
-    def setup_default_reminders(self, user_id: int):\n        \"\"\"Setup default daily sleep and wake-up reminders for the user.\"\"\"\n        from datetime import datetime\n        sleep_times = [\"22:00\", \"23:00\", \"00:00\", \"01:00\"]\n        wake_times = [\"05:00\", \"06:00\", \"07:00\", \"08:00\"]\n\n        for time_str in sleep_times:\n            hour, minute = map(int, time_str.split(':'))\n            reminder_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)\n            if reminder_time < datetime.now():\n                reminder_time += timedelta(days=1)\n            reminder_data = {\n                'user_id': user_id,\n                'title': 'Time to sleep',\n                'description': 'Reminder to go to bed',\n                'reminder_time': reminder_time.isoformat(),\n                'repeat_pattern': 'daily'\n            }\n            self.create_reminder(reminder_data)\n\n        for time_str in wake_times:\n            hour, minute = map(int, time_str.split(':'))\n            reminder_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)\n            if reminder_time < datetime.now():\n                reminder_time += timedelta(days=1)\n            reminder_data = {\n                'user_id': user_id,\n                'title': 'Time to wake up',\n                'description': 'Reminder to wake up',\n                'reminder_time': reminder_time.isoformat(),\n                'repeat_pattern': 'daily'\n            }\n            self.create_reminder(reminder_data)
+    def setup_daily_reminders(self, user_id: int):
+        """Setup daily wake-up (08:00–11:00) and sleep (20:00–00:00) reminders with motivational notes."""
+        try:
+            from datetime import datetime
+            morning_times = ["08:00", "09:00", "10:00", "11:00"]
+            night_times = ["20:00", "21:00", "22:00", "23:00", "00:00"]
+
+            morning_quotes = [
+                "Rise and conquer, Badmus. The day is yours.",
+                "Discipline at dawn builds the life you want.",
+                "Small wins this morning become big victories.",
+                "Wake up and design your future, one focused hour at a time.",
+                "Coffee is calling. Also, greatness.",
+                "Snooze buttons fear you. Get up and prove them right.",
+                "Sun’s out, ambition out.",
+                "Your goals said: ‘Where you at?’"
+            ]
+            night_quotes = [
+                "Rest early, recover hard. Tomorrow we build again.",
+                "Sleep is a strategy. Recharge for greatness, Badmus.",
+                "A calm night powers a powerful morning.",
+                "Shut down to power up. Sleep well.",
+                "Your pillow wrote: ‘Come home.’",
+                "Champions also sleep. Legends sleep early.",
+                "If success had a bedtime, it’d be now.",
+                "Recharge now; future you will send a thank-you email."
+            ]
+
+            for time_str in morning_times:
+                hour, minute = map(int, time_str.split(':'))
+                reminder_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+                if reminder_time < datetime.now():
+                    reminder_time += timedelta(days=1)
+                description = f"It's {time_str}. Wake up already, Badmus! " + morning_quotes[hash(time_str) % len(morning_quotes)]
+                reminder_data = {
+                    'user_id': user_id,
+                    'title': 'Wake up',
+                    'description': description,
+                    'reminder_time': reminder_time.isoformat(),
+                    'repeat_pattern': 'daily'
+                }
+                self.create_reminder(reminder_data)
+
+            for time_str in night_times:
+                hour, minute = map(int, time_str.split(':'))
+                reminder_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+                if reminder_time < datetime.now():
+                    reminder_time += timedelta(days=1)
+                description = f"It's {time_str}. Sleep early, prioritize recovery. " + night_quotes[hash(time_str) % len(night_quotes)]
+                reminder_data = {
+                    'user_id': user_id,
+                    'title': 'Sleep reminder',
+                    'description': description,
+                    'reminder_time': reminder_time.isoformat(),
+                    'repeat_pattern': 'daily'
+                }
+                self.create_reminder(reminder_data)
+        except Exception as e:
+            logger.error(f"Error setting up daily reminders: {e}")
+
+    def setup_default_reminders(self, user_id: int):
+        """Setup default daily sleep and wake-up reminders for the user."""
+        from datetime import datetime
+        sleep_times = ["22:00", "23:00", "00:00", "01:00"]
+        wake_times = ["05:00", "06:00", "07:00", "08:00"]
+
+        for time_str in sleep_times:
+            hour, minute = map(int, time_str.split(':'))
+            reminder_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if reminder_time < datetime.now():
+                reminder_time += timedelta(days=1)
+            reminder_data = {
+                'user_id': user_id,
+                'title': 'Time to sleep',
+                'description': 'Reminder to go to bed',
+                'reminder_time': reminder_time.isoformat(),
+                'repeat_pattern': 'daily'
+            }
+            self.create_reminder(reminder_data)
+
+        for time_str in wake_times:
+            hour, minute = map(int, time_str.split(':'))
+            reminder_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if reminder_time < datetime.now():
+                reminder_time += timedelta(days=1)
+            reminder_data = {
+                'user_id': user_id,
+                'title': 'Time to wake up',
+                'description': 'Reminder to wake up',
+                'reminder_time': reminder_time.isoformat(),
+                'repeat_pattern': 'daily'
+            }
+            self.create_reminder(reminder_data)

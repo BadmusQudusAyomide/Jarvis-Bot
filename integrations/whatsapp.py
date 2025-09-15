@@ -23,6 +23,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.assistant import JarvisAssistant
 from core.database import DatabaseManager
 from core.scheduler import SchedulerManager
+from core.email_agent import EmailAgent
 
 # Load environment variables
 load_dotenv()
@@ -49,6 +50,7 @@ class WhatsAppBot:
             raise ValueError("Missing required WhatsApp environment variables")
         
         self.assistant = JarvisAssistant()
+        self.email_agent = EmailAgent()
         self.base_url = f"https://graph.facebook.com/v18.0/{self.phone_number_id}/messages"
         self.headers = {
             'Authorization': f'Bearer {self.access_token}',
@@ -208,10 +210,52 @@ class WhatsAppBot:
             # Natural language reminders: "Remind me to <title> at YYYY-MM-DD HH:MM"
             try:
                 import re
-                nl_match = re.search(r'remind me to\s+(.+?)\s+at\s+(\d{4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{2})', message_text, re.IGNORECASE)
-                if nl_match:
-                    title = nl_match.group(1).strip()
-                    time_str = nl_match.group(2).strip()
+                m1 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(today|tomorrow)\s+at\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)', message_text, re.IGNORECASE)
+                m2 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)\b', message_text, re.IGNORECASE)
+                m3 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(\d{4}-\d{1,2}-\d{1,2})\s+(\d{1,2}:\d{2})', message_text, re.IGNORECASE)
+                title = None
+                time_tuple = None
+                if m1:
+                    title = m1.group(1).strip()
+                    time_tuple = (m1.group(2).lower(), m1.group(3).strip())
+                elif m2:
+                    title = m2.group(1).strip()
+                    time_tuple = (None, m2.group(2).strip())
+                elif m3:
+                    title = m3.group(1).strip()
+                    time_tuple = (m3.group(2).strip(), m3.group(3).strip())
+                if time_tuple:
+                    from datetime import datetime, timedelta
+                    def to_datetime(pair):
+                        if pair[0] in ('today', 'tomorrow'):
+                            base = datetime.now()
+                            if pair[0] == 'tomorrow':
+                                base += timedelta(days=1)
+                            hm = pair[1].lower().replace(' ', '')
+                            ampm = 'am' if 'am' in hm or 'pm' in hm else None
+                            hm = hm.replace('am','').replace('pm','')
+                            hour, minute = map(int, hm.split(':'))
+                            if ampm == 'pm' and hour < 12:
+                                hour += 12
+                            if ampm == 'am' and hour == 12:
+                                hour = 0
+                            return base.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                        if pair[0] is None:
+                            base = datetime.now()
+                            hm = pair[1].lower().replace(' ', '')
+                            ampm = 'am' if 'am' in hm or 'pm' in hm else None
+                            hm = hm.replace('am','').replace('pm','')
+                            hour, minute = map(int, hm.split(':'))
+                            if ampm == 'pm' and hour < 12:
+                                hour += 12
+                            if ampm == 'am' and hour == 12:
+                                hour = 0
+                            dt = base.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                            if dt < base:
+                                dt += timedelta(days=1)
+                            return dt
+                        return datetime.fromisoformat(f"{pair[0]} {pair[1]}")
+                    reminder_dt = to_datetime(time_tuple)
                     # Ensure DB user exists
                     if not hasattr(self, 'db') or self.db is None:
                         self.db = DatabaseManager()
@@ -227,7 +271,7 @@ class WhatsAppBot:
                         'user_id': user['id'],
                         'title': title,
                         'description': '',
-                        'reminder_time': time_str,
+                        'reminder_time': reminder_dt.isoformat(),
                         'repeat_pattern': None
                     }
                     result = self.scheduler_manager.create_reminder(reminder_data)
@@ -623,14 +667,112 @@ Need more help? Just ask me anything! 💡"""
                 
             elif command == '/status':
                 status_message = """✅ *Jarvis Status: ONLINE*
-
-🧠 AI Assistant: Active
-🎤 Voice Recognition: Ready
-📚 Knowledge Base: Ready
-🔗 WhatsApp Integration: Connected
-
-All systems operational! 🚀"""
-                self.send_text_message(sender, status_message)
+ 
+ 🧠 AI Assistant: Active
+ 🎤 Voice Recognition: Ready
+ 📚 Knowledge Base: Ready
+ 🔗 WhatsApp Integration: Connected
+ 
+ All systems operational! 🚀"""
+                 self.send_text_message(sender, status_message)
+            elif command.startswith('/reminders'):
+                try:
+                    if not hasattr(self, 'db') or self.db is None:
+                        self.db = DatabaseManager()
+                    if not hasattr(self, 'scheduler_manager') or self.scheduler_manager is None:
+                        self.scheduler_manager = SchedulerManager(self.db)
+                        self.scheduler_manager.start()
+                    user = self.db.get_or_create_user(platform_id=sender, platform='whatsapp', username=sender)
+                    reminders = self.scheduler_manager.get_user_reminders(user['id'])
+                    if not reminders:
+                        self.send_text_message(sender, "You have no active reminders.")
+                        return
+                    lines = ["🗓️ Your active reminders:\n"]
+                    for r in reminders[:15]:
+                        rid = r.get('id')
+                        title = r.get('title')
+                        when = r.get('reminder_time')
+                        next_time = r.get('next_run_time') or ''
+                        if next_time:
+                            lines.append(f"#{rid} • {title} • at {when} (next: {next_time})")
+                        else:
+                            lines.append(f"#{rid} • {title} • at {when}")
+                    self.send_text_message(sender, "\n".join(lines))
+                except Exception as e:
+                    logger.error(f"/reminders error: {e}")
+                    self.send_text_message(sender, "Sorry, I couldn't fetch your reminders.")
+            elif command.startswith('/cancel'):
+                try:
+                    parts = command.split()
+                    if len(parts) < 2:
+                        self.send_text_message(sender, "Usage: /cancel <reminder_id>")
+                        return
+                    try:
+                        reminder_id = int(parts[1])
+                    except ValueError:
+                        self.send_text_message(sender, "Reminder ID must be a number.")
+                        return
+                    if not hasattr(self, 'db') or self.db is None:
+                        self.db = DatabaseManager()
+                    if not hasattr(self, 'scheduler_manager') or self.scheduler_manager is None:
+                        self.scheduler_manager = SchedulerManager(self.db)
+                        self.scheduler_manager.start()
+                    result = self.scheduler_manager.cancel_reminder(reminder_id)
+                    if result.get('success'):
+                        self.send_text_message(sender, f"✅ Cancelled reminder #{reminder_id}")
+                    else:
+                        self.send_text_message(sender, f"❌ Could not cancel: {result.get('error','unknown error')}")
+                except Exception as e:
+                    logger.error(f"/cancel error: {e}")
+                    self.send_text_message(sender, "Sorry, I couldn't cancel that reminder.")
+                
+            elif command.startswith('/email_summary'):
+                try:
+                    count = 5
+                    parts = command.split()
+                    if len(parts) > 1:
+                        try:
+                            count = max(1, min(20, int(parts[1])))
+                        except Exception:
+                            pass
+                    if not hasattr(self, 'email_agent') or self.email_agent is None:
+                        self.email_agent = EmailAgent()
+                    self.send_text_message(sender, "📬 Fetching recent emails...")
+                    emails = self.email_agent.fetch_recent_emails(limit=count)
+                    summary = self.email_agent.summarize_emails(emails)
+                    self.send_text_message(sender, summary)
+                except Exception as e:
+                    logger.error(f"/email_summary error: {e}")
+                    self.send_text_message(sender, "I couldn't summarize your inbox. Check IMAP settings.")
+            elif command.startswith('/email_draft'):
+                try:
+                    # Expected usage: reply to a previous message containing email context is not available on WhatsApp easily
+                    # So we accept: /email_draft <instructions> \n\n<email context pasted after>
+                    text = command[len('/email_draft'):].strip()
+                    if not text:
+                        self.send_text_message(sender, "Usage: /email_draft <instructions> then paste email content in next message.")
+                        return
+                    self.send_text_message(sender, "Okay. Please paste the email content to reply to.")
+                    # In a simple flow, we cannot hold session here without storage; instruct the user instead
+                    self.send_text_message(sender, "After pasting, send: /email_draft_go <instructions> <separator> <email content>")
+                except Exception as e:
+                    logger.error(f"/email_draft error: {e}")
+                    self.send_text_message(sender, "I couldn't start drafting right now.")
+            elif command.startswith('/email_draft_go'):
+                try:
+                    # Format: /email_draft_go instructions || email context
+                    raw = command[len('/email_draft_go'):].strip()
+                    if '||' not in raw:
+                        self.send_text_message(sender, "Usage: /email_draft_go <instructions> || <email content>")
+                        return
+                    instructions, email_context = [p.strip() for p in raw.split('||', 1)]
+                    if not hasattr(self, 'email_agent') or self.email_agent is None:
+                        self.email_agent = EmailAgent()
+                    draft = self.email_agent.draft_reply(email_context, instructions)
+                    self.send_text_message(sender, f"✉️ Draft reply:\n\n{draft}")
+                except Exception as e:
+                    logger.error(f"/email_draft_go error: {e}")
+                    self.send_text_message(sender, "I couldn't draft a reply right now.")
                 
             else:
                 self.send_text_message(sender, "Unknown command. Use /help to see available commands.")

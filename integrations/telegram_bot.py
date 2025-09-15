@@ -14,6 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.assistant import JarvisAssistant
 from core.database import DatabaseManager
 from core.scheduler import SchedulerManager
+from core.email_agent import EmailAgent
 
 # Load environment variables
 load_dotenv()
@@ -40,6 +41,7 @@ class TelegramBot:
         self.application = None
         self.scheduler_manager = None
         self.db = None
+        self.email_agent = None
         
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -76,7 +78,11 @@ Just send me a message or voice note to get started! 🚀
             first_name=getattr(tg_user, 'first_name', None),
             last_name=getattr(tg_user, 'last_name', None)
         )
-        self.scheduler_manager.setup_daily_reminders(user['id'])
+        # Ensure daily reminders are set without breaking /start if scheduler fails
+        try:
+            self.scheduler_manager.setup_daily_reminders(user['id'])
+        except Exception as e:
+            logger.warning(f"Could not setup daily reminders: {e}")
         await update.message.reply_text(welcome_message, parse_mode='Markdown')
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -115,6 +121,74 @@ Need more help? Just ask me anything! 💡
         """
         
         await update.message.reply_text(help_message, parse_mode='Markdown')
+
+    async def reminders_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        List active reminders for the current user.
+        """
+        try:
+            # Ensure DB and scheduler
+            if not self.db:
+                self.db = DatabaseManager()
+            if not self.scheduler_manager:
+                self.scheduler_manager = SchedulerManager(self.db)
+                self.scheduler_manager.start()
+
+            chat_id = str(update.effective_chat.id)
+            tg_user = update.effective_user
+            user = self.db.get_or_create_user(
+                platform_id=chat_id,
+                platform='telegram',
+                username=getattr(tg_user, 'username', None),
+                first_name=getattr(tg_user, 'first_name', None),
+                last_name=getattr(tg_user, 'last_name', None)
+            )
+
+            reminders = self.scheduler_manager.get_user_reminders(user['id'])
+            if not reminders:
+                await update.message.reply_text("You have no active reminders.")
+                return
+            lines = ["🗓️ Your active reminders:\n"]
+            for r in reminders[:15]:
+                when = r.get('reminder_time')
+                rid = r.get('id')
+                title = r.get('title')
+                next_time = r.get('next_run_time') or ''
+                if next_time:
+                    lines.append(f"#{rid} • {title} • at {when} (next: {next_time})")
+                else:
+                    lines.append(f"#{rid} • {title} • at {when}")
+            await update.message.reply_text("\n".join(lines))
+        except Exception as e:
+            logger.error(f"/reminders error: {e}")
+            await update.message.reply_text("Sorry, I couldn't fetch your reminders.")
+
+    async def cancel_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Cancel a reminder by ID: /cancel <id>
+        """
+        try:
+            if not context.args:
+                await update.message.reply_text("Usage: /cancel <reminder_id>")
+                return
+            try:
+                reminder_id = int(context.args[0])
+            except ValueError:
+                await update.message.reply_text("Reminder ID must be a number.")
+                return
+            if not self.db:
+                self.db = DatabaseManager()
+            if not self.scheduler_manager:
+                self.scheduler_manager = SchedulerManager(self.db)
+                self.scheduler_manager.start()
+            result = self.scheduler_manager.cancel_reminder(reminder_id)
+            if result.get('success'):
+                await update.message.reply_text(f"✅ Cancelled reminder #{reminder_id}")
+            else:
+                await update.message.reply_text(f"❌ Could not cancel: {result.get('error','unknown error')}")
+        except Exception as e:
+            logger.error(f"/cancel error: {e}")
+            await update.message.reply_text("Sorry, I couldn't cancel that reminder.")
     
     async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -247,14 +321,54 @@ Please check the configuration and try again.
             await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
             
             # Process message with assistant
-            # Quick natural-language reminder: "remind me to <title> at YYYY-MM-DD HH:MM"
-            # Example: Remind me to pay bills at 2025-09-08 12:10
+            # Natural-language reminders: today/tomorrow by HH:MM(am/pm) or explicit date
             try:
-                nl_match = re.search(r'remind me to\s+(.+?)\s+at\s+(\d{4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{2})', user_message, re.IGNORECASE)
-                if nl_match and self.scheduler_manager and self.db:
-                    title = nl_match.group(1).strip()
-                    time_str = nl_match.group(2).strip()
-                    # Resolve user
+                m1 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(today|tomorrow)\s+at\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)', user_message, re.IGNORECASE)
+                m2 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)\b', user_message, re.IGNORECASE)
+                m3 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(\d{4}-\d{1,2}-\d{1,2})\s+(\d{1,2}:\d{2})', user_message, re.IGNORECASE)
+                time_tuple = None
+                title = None
+                if m1:
+                    title = m1.group(1).strip()
+                    time_tuple = (m1.group(2).lower(), m1.group(3).strip())
+                elif m2:
+                    title = m2.group(1).strip()
+                    time_tuple = (None, m2.group(2).strip())
+                elif m3:
+                    title = m3.group(1).strip()
+                    time_tuple = (m3.group(2).strip(), m3.group(3).strip())
+                if time_tuple and self.scheduler_manager and self.db:
+                    from datetime import datetime, timedelta
+                    def to_datetime(pair):
+                        if pair[0] in ('today', 'tomorrow'):
+                            base = datetime.now()
+                            if pair[0] == 'tomorrow':
+                                base += timedelta(days=1)
+                            hm = pair[1].lower().replace(' ', '')
+                            ampm = 'am' if 'am' in hm or 'pm' in hm else None
+                            hm = hm.replace('am','').replace('pm','')
+                            hour, minute = map(int, hm.split(':'))
+                            if ampm == 'pm' and hour < 12:
+                                hour += 12
+                            if ampm == 'am' and hour == 12:
+                                hour = 0
+                            return base.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                        if pair[0] is None:
+                            base = datetime.now()
+                            hm = pair[1].lower().replace(' ', '')
+                            ampm = 'am' if 'am' in hm or 'pm' in hm else None
+                            hm = hm.replace('am','').replace('pm','')
+                            hour, minute = map(int, hm.split(':'))
+                            if ampm == 'pm' and hour < 12:
+                                hour += 12
+                            if ampm == 'am' and hour == 12:
+                                hour = 0
+                            dt = base.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                            if dt < base:
+                                dt += timedelta(days=1)
+                            return dt
+                        return datetime.fromisoformat(f"{pair[0]} {pair[1]}")
+                    dt = to_datetime(time_tuple)
                     chat_id = str(update.effective_chat.id)
                     tg_user = update.effective_user
                     user = self.db.get_or_create_user(
@@ -264,24 +378,18 @@ Please check the configuration and try again.
                         first_name=getattr(tg_user, 'first_name', None),
                         last_name=getattr(tg_user, 'last_name', None)
                     )
-                    reminder_data = {
+                    result = self.scheduler_manager.create_reminder({
                         'user_id': user['id'],
                         'title': title,
                         'description': '',
-                        'reminder_time': time_str,
+                        'reminder_time': dt.isoformat(),
                         'repeat_pattern': None
-                    }
-                    result = self.scheduler_manager.create_reminder(reminder_data)
+                    })
                     if result.get('success'):
-                        await update.message.reply_text(
-                            f"✅ Reminder set for {result['scheduled_time']}\nTitle: {title}"
-                        )
-                        return
+                        await update.message.reply_text(f"✅ Reminder set for {result['scheduled_time']}\nTitle: {title}")
                     else:
-                        await update.message.reply_text(
-                            f"❌ Could not create reminder: {result.get('error','unknown error')}"
-                        )
-                        return
+                        await update.message.reply_text(f"❌ Could not create reminder: {result.get('error','unknown error')}")
+                    return
             except Exception as e:
                 logger.error(f"Reminder parse error: {e}")
             
@@ -417,6 +525,53 @@ Please check the configuration and try again.
         except Exception as e:
             logger.error(f"Error generating image: {e}")
             await update.message.reply_text("An error occurred while generating the image.")
+
+    async def email_summary_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Summarize recent inbox emails.
+        Usage: /email_summary [count]
+        """
+        try:
+            count = 5
+            if context.args:
+                try:
+                    count = max(1, min(20, int(context.args[0])))
+                except Exception:
+                    pass
+            if not self.email_agent:
+                self.email_agent = EmailAgent()
+            await update.message.reply_text("📬 Fetching recent emails...")
+            emails = self.email_agent.fetch_recent_emails(limit=count)
+            summary = self.email_agent.summarize_emails(emails)
+            await update.message.reply_text(summary)
+        except Exception as e:
+            logger.error(f"/email_summary error: {e}")
+            await update.message.reply_text("I couldn't summarize your inbox. Check IMAP settings.")
+
+    async def email_draft_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Draft a reply from pasted email context and brief instructions.
+        Usage: /email_draft <instructions> (reply to a message containing the email text, or paste it)
+        """
+        try:
+            instructions = ' '.join(context.args).strip() if context.args else ''
+            if not instructions:
+                await update.message.reply_text("Usage: /email_draft <instructions>. Reply to an email text or paste it below.")
+                return
+            # Try to get email context from replied message
+            email_context = ''
+            if update.message and update.message.reply_to_message and update.message.reply_to_message.text:
+                email_context = update.message.reply_to_message.text
+            else:
+                await update.message.reply_text("Please reply to a message containing the email content to draft a reply.")
+                return
+            if not self.email_agent:
+                self.email_agent = EmailAgent()
+            draft = self.email_agent.draft_reply(email_context, instructions)
+            await update.message.reply_text(f"✉️ Draft reply:\n\n{draft}")
+        except Exception as e:
+            logger.error(f"/email_draft error: {e}")
+            await update.message.reply_text("I couldn't draft a reply right now.")
     
     async def _send_voice_response(self, update: Update, context: ContextTypes.DEFAULT_TYPE, text: str) -> None:
         """
@@ -462,10 +617,14 @@ Please check the configuration and try again.
         # Command handlers
         self.application.add_handler(CommandHandler("start", self.start_command))
         self.application.add_handler(CommandHandler("help", self.help_command))
+        self.application.add_handler(CommandHandler("reminders", self.reminders_command))
+        self.application.add_handler(CommandHandler("cancel", self.cancel_command))
         self.application.add_handler(CommandHandler("status", self.status_command))
         self.application.add_handler(CommandHandler("voice_on", self.voice_on_command))
         self.application.add_handler(CommandHandler("voice_off", self.voice_off_command))
         self.application.add_handler(CommandHandler("image", self.image_command))
+        self.application.add_handler(CommandHandler("email_summary", self.email_summary_command))
+        self.application.add_handler(CommandHandler("email_draft", self.email_draft_command))
         
         # Message handlers
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_text_message))
