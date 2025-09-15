@@ -674,7 +674,7 @@ Need more help? Just ask me anything! 💡"""
  🔗 WhatsApp Integration: Connected
  
  All systems operational! 🚀"""
-                 self.send_text_message(sender, status_message)
+                self.send_text_message(sender, status_message)
             elif command.startswith('/reminders'):
                 try:
                     if not hasattr(self, 'db') or self.db is None:
