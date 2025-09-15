@@ -210,8 +210,14 @@ class WhatsAppBot:
             # Natural language reminders: "Remind me to <title> at YYYY-MM-DD HH:MM"
             try:
                 import re
-                # Strip chat export prefixes like "[9/15, 1:16 PM] Name: "
-                cleaned = re.sub(r'^\[[^\]]+\]\s*[^:]*:\s*', '', message_text).strip()
+                # Strip chat export prefixes like "[9/15, 1:16 PM] Name: " or "9/15, 1:16 PM] Name: "
+                cleaned = message_text.strip()
+                # Remove optional leading timestamp + name prefix
+                cleaned = re.sub(
+                    r'^[\[]?\s*\d{1,2}/\d{1,2}(?:/\d{2,4})?\s*,\s*\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?\s*\]?\s*[\u200e\u200f]?\s*[^:：]*[:：]\s*',
+                    '',
+                    cleaned
+                )
                 m1 = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(today|tomorrow)\s+at\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)', cleaned, re.IGNORECASE)
                 # time-first variant: "by 1:30pm today"
                 m1b = re.search(r'remind me to\s+(.+?)\s+(?:by|at)\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)\s+(today|tomorrow)\b', cleaned, re.IGNORECASE)
