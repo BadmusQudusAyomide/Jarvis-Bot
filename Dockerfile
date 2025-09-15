@@ -53,5 +53,5 @@ EXPOSE 5000
 ENV DISABLE_EMBEDDINGS=true
 ENV DISABLE_WHISPER=true
 
-# Command to run the application (Flask app factory)
-CMD gunicorn --factory app:create_app --bind 0.0.0.0:$PORT --timeout 120
+# Command to run the application via WSGI entrypoint
+CMD gunicorn wsgi:app --bind 0.0.0.0:$PORT --timeout 120
