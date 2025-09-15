@@ -6,7 +6,12 @@ from typing import Dict, Any, Optional
 import tempfile
 from dotenv import load_dotenv
 import re
-from core.youtube_utils import YouTubeDownloader
+YouTubeDownloader = None
+try:
+    from core.youtube_utils import YouTubeDownloader as _YTD
+    YouTubeDownloader = _YTD
+except Exception:
+    YouTubeDownloader = None
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -83,6 +88,9 @@ class TelegramWebhook:
                         url_match = re.search(r'https?://\\S+', text)
                         if url_match:
                             url = url_match.group(0)
+                            if YouTubeDownloader is None:
+                                self._send_text_message(chat['id'], "Video download isn't enabled on this server.")
+                                return
                             downloader = YouTubeDownloader()
                             video_path = downloader.download_video(url)
                             

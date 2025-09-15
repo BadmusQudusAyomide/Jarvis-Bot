@@ -17,6 +17,9 @@ PyPDF2==3.0.1
 # Image Processing
 pillow==10.0.1
 
+
+yt-dlp==2024.8.6
+
 # Web Scraping & APIs
 beautifulsoup4==4.12.2
 lxml==4.9.3
