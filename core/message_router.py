@@ -652,58 +652,28 @@ For Gmail, use an App Password instead of your regular password.''',
             return {
                 'type': 'text',
                 'content': response,
-                'success': False
-            }
-        
-        # Fetch recent emails
-        emails = email_agent.fetch_recent_emails(limit=5)
-        
-        if not emails:
-            return {
-                'type': 'text',
-                'content': '📧 No recent emails found.',
                 'success': True
             }
-        
-        # Generate AI summary
-        summary = email_agent.summarize_emails(emails)
-        
-        # Format response
-        response = f"📧 **Recent Emails Summary:**\n\n{summary}\n\n"
-        response += "**Recent Messages:**\n"
-        
-        for i, email_item in enumerate(emails[:3], 1):
-            response += f"\n{i}. **From:** {email_item['from']}\n"
-            response += f"   **Subject:** {email_item['subject']}\n"
-            response += f"   **Date:** {email_item['date']}\n"
-            if email_item['snippet']:
-                response += f"   **Preview:** {email_item['snippet'][:100]}...\n"
-        
-        return {
-            'type': 'text',
-            'content': response,
-            'success': True
-        }
-        
-    except Exception as e:
-        logger.error(f"Error checking emails: {e}")
-        return {
-            'type': 'text',
-            'content': f'❌ Error checking emails: {str(e)}',
-            'success': False
-        }
+            
+        except Exception as e:
+            logger.error(f"Error checking emails: {e}")
+            return {
+                'type': 'text',
+                'content': f'❌ Error checking emails: {str(e)}',
+                'success': False
+            }
 
     def _handle_setup_social(self, user: Dict, content: str) -> Dict:
-    """Handle social media setup command."""
-    try:
-        from core.social_media_manager import SocialMediaManager
-        
-        social_manager = SocialMediaManager()
-        
-        # Setup daily tech quotes
-        social_manager.schedule_daily_tech_quotes(user['id'])
-        
-        setup_text = '''📱 **Social Media Setup Complete!**
+        """Handle social media setup command."""
+        try:
+            from core.social_media_manager import SocialMediaManager
+            
+            social_manager = SocialMediaManager()
+            
+            # Setup daily tech quotes
+            social_manager.schedule_daily_tech_quotes(user['id'])
+            
+            setup_text = '''📱 **Social Media Setup Complete!**
 
 ✅ **Daily Tech Quotes Scheduled:**
 • 🌅 **9:00 AM** - Morning inspiration
@@ -740,30 +710,30 @@ FACEBOOK_APP_SECRET=your_app_secret
 • Facebook: https://developers.facebook.com
 
 Your automated posting is ready! 🚀'''
-        
-        return {
-            'type': 'text',
-            'content': setup_text,
-            'success': True
-        }
-        
-    except Exception as e:
-        logger.error(f"Error setting up social media: {e}")
-        return {
-            'type': 'text',
-            'content': f'❌ Error setting up social media: {str(e)}',
-            'success': False
-        }
+            
+            return {
+                'type': 'text',
+                'content': setup_text,
+                'success': True
+            }
+            
+        except Exception as e:
+            logger.error(f"Error setting up social media: {e}")
+            return {
+                'type': 'text',
+                'content': f'❌ Error setting up social media: {str(e)}',
+                'success': False
+            }
 
     def _handle_social_stats(self, user: Dict, content: str) -> Dict:
-    """Handle social media stats command."""
-    try:
-        from core.social_media_manager import SocialMediaManager
-        
-        social_manager = SocialMediaManager()
-        stats = social_manager.get_posting_stats(user['id'])
-        
-        stats_text = f'''📊 **Social Media Statistics**
+        """Handle social media stats command."""
+        try:
+            from core.social_media_manager import SocialMediaManager
+            
+            social_manager = SocialMediaManager()
+            stats = social_manager.get_posting_stats(user['id'])
+            
+            stats_text = f'''📊 **Social Media Statistics**
 
 📈 **Posting Activity:**
 • Total Posts: {stats['total_posts']}
@@ -778,17 +748,17 @@ Your automated posting is ready! 🚀'''
 💡 **Quick Commands:**
 • Send "tech quote" to post inspiration
 • Send "post to both: your message" to cross-post'''
-        
-        return {
-            'type': 'text',
-            'content': stats_text,
-            'success': True
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting social stats: {e}")
-        return {
-            'type': 'text',
-            'content': f'❌ Error getting social stats: {str(e)}',
-            'success': False
-        }
+            
+            return {
+                'type': 'text',
+                'content': stats_text,
+                'success': True
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting social stats: {e}")
+            return {
+                'type': 'text',
+                'content': f'❌ Error getting social stats: {str(e)}',
+                'success': False
+            }
