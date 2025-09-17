@@ -27,7 +27,9 @@ class MessageRouter:
             'setreminder': self._handle_set_reminder,
             'stats': self._handle_stats,
             'setupsleepwake': self._handle_setup_sleep_wake,
-            'smartreminders': self._handle_setup_sleep_wake
+            'smartreminders': self._handle_setup_sleep_wake,
+            'emails': self._handle_emails,
+            'checkemail': self._handle_emails
         }
         
         logger.info("Message router initialized")
@@ -334,6 +336,7 @@ class MessageRouter:
 /reminders - Show your reminders
 /setreminder - Set a specific reminder
 /smartreminders - Set up automatic sleep/wake reminders
+/emails - Check recent emails with AI summary
 /stats - Show usage statistics
 
 **What I can do:**
@@ -574,4 +577,68 @@ These will repeat daily to help you maintain a healthy sleep schedule! 💪''',
                 'content': f'❌ Error setting up reminders: {str(e)}',
                 'success': False
             }
-
+
+    def _handle_emails(self, user: Dict, content: str) -> Dict:
+        """Handle email checking command."""
+        try:
+            from core.email_agent import EmailAgent
+            
+            email_agent = EmailAgent()
+            
+            # Check if email is configured
+            if not all([email_agent.host, email_agent.username, email_agent.password]):
+                return {
+                    'type': 'text',
+                    'content': '''📧 **Email Not Configured**
+                    
+To enable email checking, add these to your .env file:
+
+```
+IMAP_HOST=imap.gmail.com
+IMAP_PORT=993
+IMAP_USERNAME=your-email@gmail.com
+IMAP_PASSWORD=your-app-password
+IMAP_SSL=true
+```
+
+For Gmail, use an App Password instead of your regular password.''',
+                    'success': False
+                }
+            
+            # Fetch recent emails
+            emails = email_agent.fetch_recent_emails(limit=5)
+            
+            if not emails:
+                return {
+                    'type': 'text',
+                    'content': '📧 No recent emails found.',
+                    'success': True
+                }
+            
+            # Generate AI summary
+            summary = email_agent.summarize_emails(emails)
+            
+            # Format response
+            response = f"📧 **Recent Emails Summary:**\n\n{summary}\n\n"
+            response += "**Recent Messages:**\n"
+            
+            for i, email_item in enumerate(emails[:3], 1):
+                response += f"\n{i}. **From:** {email_item['from']}\n"
+                response += f"   **Subject:** {email_item['subject']}\n"
+                response += f"   **Date:** {email_item['date']}\n"
+                if email_item['snippet']:
+                    response += f"   **Preview:** {email_item['snippet'][:100]}...\n"
+            
+            return {
+                'type': 'text',
+                'content': response,
+                'success': True
+            }
+            
+        except Exception as e:
+            logger.error(f"Error checking emails: {e}")
+            return {
+                'type': 'text',
+                'content': f'❌ Error checking emails: {str(e)}',
+                'success': False
+            }
