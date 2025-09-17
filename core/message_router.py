@@ -29,7 +29,9 @@ class MessageRouter:
             'setupsleepwake': self._handle_setup_sleep_wake,
             'smartreminders': self._handle_setup_sleep_wake,
             'emails': self._handle_emails,
-            'checkemail': self._handle_emails
+            'checkemail': self._handle_emails,
+            'setupsocial': self._handle_setup_social,
+            'socialstats': self._handle_social_stats
         }
         
         logger.info("Message router initialized")
@@ -319,6 +321,18 @@ class MessageRouter:
             user_id = context.get('user_id')
             return assistant._parse_natural_reminder(content, user_id, self.scheduler)
         
+        # Check if this is a social media post command
+        if content_lower.startswith(('post to twitter:', 'post to facebook:', 'post to both:')) or 'tech quote' in content_lower:
+            try:
+                from core.social_media_manager import SocialMediaManager
+                social_manager = SocialMediaManager()
+                user_id = context.get('user_id')
+                result = social_manager.process_whatsapp_post_command(content, user_id)
+                if result:
+                    return result
+            except Exception as e:
+                return f"❌ Social media posting error: {str(e)}"
+        
         return assistant._handle_special_commands(content)
     
     # Command handlers
@@ -337,6 +351,8 @@ class MessageRouter:
 /setreminder - Set a specific reminder
 /smartreminders - Set up automatic sleep/wake reminders
 /emails - Check recent emails with AI summary
+/setupsocial - Set up social media posting
+/socialstats - View social media statistics
 /stats - Show usage statistics
 
 **What I can do:**
@@ -349,6 +365,7 @@ class MessageRouter:
 🎵 Download media from TikTok, Instagram, YouTube, Facebook
 🌍 Translate text between languages
 😴 Smart sleep & wake reminders
+📱 Automated social media posting
 
 **Natural Language Examples:**
 - "Weather in London"
@@ -364,6 +381,9 @@ class MessageRouter:
 - Send me any social media URL to download videos/audio
 - Use natural language for reminders (no complex formats needed)
 - Type `/smartreminders` to set up automatic sleep/wake alerts
+- Type `/setupsocial` for automated daily tech quotes
+- Say "post to twitter: your message" to post directly
+- Say "tech quote" to share inspiration
 
 Just send me a message and I'll help you! 🚀
         """
@@ -632,13 +652,143 @@ For Gmail, use an App Password instead of your regular password.''',
             return {
                 'type': 'text',
                 'content': response,
-                'success': True
-            }
-            
-        except Exception as e:
-            logger.error(f"Error checking emails: {e}")
-            return {
-                'type': 'text',
-                'content': f'❌ Error checking emails: {str(e)}',
                 'success': False
             }
+        
+        # Fetch recent emails
+        emails = email_agent.fetch_recent_emails(limit=5)
+        
+        if not emails:
+            return {
+                'type': 'text',
+                'content': '📧 No recent emails found.',
+                'success': True
+            }
+        
+        # Generate AI summary
+        summary = email_agent.summarize_emails(emails)
+        
+        # Format response
+        response = f"📧 **Recent Emails Summary:**\n\n{summary}\n\n"
+        response += "**Recent Messages:**\n"
+        
+        for i, email_item in enumerate(emails[:3], 1):
+            response += f"\n{i}. **From:** {email_item['from']}\n"
+            response += f"   **Subject:** {email_item['subject']}\n"
+            response += f"   **Date:** {email_item['date']}\n"
+            if email_item['snippet']:
+                response += f"   **Preview:** {email_item['snippet'][:100]}...\n"
+        
+        return {
+            'type': 'text',
+            'content': response,
+            'success': True
+        }
+        
+    except Exception as e:
+        logger.error(f"Error checking emails: {e}")
+        return {
+            'type': 'text',
+            'content': f'❌ Error checking emails: {str(e)}',
+            'success': False
+        }
+
+    def _handle_setup_social(self, user: Dict, content: str) -> Dict:
+    """Handle social media setup command."""
+    try:
+        from core.social_media_manager import SocialMediaManager
+        
+        social_manager = SocialMediaManager()
+        
+        # Setup daily tech quotes
+        social_manager.schedule_daily_tech_quotes(user['id'])
+        
+        setup_text = '''📱 **Social Media Setup Complete!**
+
+✅ **Daily Tech Quotes Scheduled:**
+• 🌅 **9:00 AM** - Morning inspiration
+• 🌆 **6:00 PM** - Evening wisdom
+
+✅ **WhatsApp Commands Available:**
+• `post to twitter: your message` - Post to Twitter
+• `post to facebook: your message` - Post to Facebook  
+• `post to both: your message` - Post to both platforms
+• `tech quote` - Post a random tech quote
+
+⚙️ **Required Setup:**
+Add these to your .env file:
+
+**Twitter/X:**
+```
+TWITTER_API_KEY=your_api_key
+TWITTER_API_SECRET=your_api_secret
+TWITTER_ACCESS_TOKEN=your_access_token
+TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
+TWITTER_BEARER_TOKEN=your_bearer_token
+```
+
+**Facebook:**
+```
+FACEBOOK_PAGE_ACCESS_TOKEN=your_page_token
+FACEBOOK_PAGE_ID=your_page_id
+FACEBOOK_APP_ID=your_app_id
+FACEBOOK_APP_SECRET=your_app_secret
+```
+
+🔗 **Get API Access:**
+• Twitter: https://developer.twitter.com
+• Facebook: https://developers.facebook.com
+
+Your automated posting is ready! 🚀'''
+        
+        return {
+            'type': 'text',
+            'content': setup_text,
+            'success': True
+        }
+        
+    except Exception as e:
+        logger.error(f"Error setting up social media: {e}")
+        return {
+            'type': 'text',
+            'content': f'❌ Error setting up social media: {str(e)}',
+            'success': False
+        }
+
+    def _handle_social_stats(self, user: Dict, content: str) -> Dict:
+    """Handle social media stats command."""
+    try:
+        from core.social_media_manager import SocialMediaManager
+        
+        social_manager = SocialMediaManager()
+        stats = social_manager.get_posting_stats(user['id'])
+        
+        stats_text = f'''📊 **Social Media Statistics**
+
+📈 **Posting Activity:**
+• Total Posts: {stats['total_posts']}
+• Twitter Posts: {stats['twitter_posts']}
+• Facebook Posts: {stats['facebook_posts']}
+• Last Post: {stats['last_post'] or 'Never'}
+
+🔄 **Scheduled Posts:**
+• Daily tech quotes at 9 AM & 6 PM
+• Auto-posting: {'✅ Active' if stats['total_posts'] > 0 else '⏸️ Pending setup'}
+
+💡 **Quick Commands:**
+• Send "tech quote" to post inspiration
+• Send "post to both: your message" to cross-post'''
+        
+        return {
+            'type': 'text',
+            'content': stats_text,
+            'success': True
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting social stats: {e}")
+        return {
+            'type': 'text',
+            'content': f'❌ Error getting social stats: {str(e)}',
+            'success': False
+        }
