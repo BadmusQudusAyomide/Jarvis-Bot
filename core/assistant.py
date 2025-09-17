@@ -1,5 +1,6 @@
 import google.generativeai as genai
 import os
+from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 import speech_recognition as sr
 from pydub import AudioSegment
@@ -365,10 +366,9 @@ class JarvisAssistant:
             else:
                 return f"❌ {result['error']}"
         
-        # Task management
-        if message_lower.startswith(('add task', 'schedule task', 'remind me')):
-            return "To add a task, please provide: title, description, and due date (YYYY-MM-DD HH:MM)\n" \
-                   "Example: 'Add task: Meeting with client, Discuss project requirements, 2024-01-15 14:30'"
+        # Task management - Natural Language Reminder Processing
+        if message_lower.startswith(('add task', 'schedule task', 'remind me', 'reminder')):
+            return self._parse_natural_reminder(message)
         
         if message_lower.startswith('my tasks') or 'upcoming tasks' in message_lower:
             tasks = self.task_scheduler.get_upcoming_tasks()
@@ -415,11 +415,34 @@ class JarvisAssistant:
                 return f"Translation: {translation['translated_text']}"
             return "Sorry, I couldn't translate that text right now."
         
-        # YouTube Download
-        if any(keyword in message_lower for keyword in ['download', 'youtube', 'video', 'audio']):
-            url_match = re.search(r'(https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)[\w-]+)', message)
-            if url_match:
-                url = url_match.group(1)
+        # Social Media Download - Enhanced with TikTok, Instagram, YouTube, Facebook
+        if any(keyword in message_lower for keyword in ['download', 'youtube', 'tiktok', 'instagram', 'facebook', 'video', 'audio']):
+            # YouTube URLs
+            youtube_match = re.search(r'(https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)[\w-]+)', message)
+            # TikTok URLs
+            tiktok_match = re.search(r'(https?://(?:www\.)?(?:tiktok\.com|vm\.tiktok\.com|vt\.tiktok\.com)/[\w\-\./\?=&]+)', message)
+            # Instagram URLs
+            instagram_match = re.search(r'(https?://(?:www\.)?instagram\.com/(?:p|reel|tv)/[\w-]+/?)', message)
+            # Facebook URLs
+            facebook_match = re.search(r'(https?://(?:www\.)?(?:facebook\.com|fb\.watch)/[\w\-\./\?=&]+)', message)
+            
+            url = None
+            platform = None
+            
+            if youtube_match:
+                url = youtube_match.group(1)
+                platform = "YouTube"
+            elif tiktok_match:
+                url = tiktok_match.group(1)
+                platform = "TikTok"
+            elif instagram_match:
+                url = instagram_match.group(1)
+                platform = "Instagram"
+            elif facebook_match:
+                url = facebook_match.group(1)
+                platform = "Facebook"
+            
+            if url and platform:
                 media_type = 'audio' if 'audio' in message_lower else 'video'
                 
                 # Use AI engine's download_media method
@@ -428,25 +451,9 @@ class JarvisAssistant:
                 result = ai_engine.download_media(url, media_type)
                 
                 if result:
-                    return f"✅ Successfully downloaded {media_type} from YouTube!\n📁 Saved to: {result}"
+                    return f"✅ Successfully downloaded {media_type} from {platform}!\n📁 Saved to: {result}"
                 else:
-                    return f"❌ Failed to download {media_type} from YouTube. Please check the URL and try again."
-        
-        # Facebook Reels Download
-        if any(keyword in message_lower for keyword in ['download', 'facebook', 'reel', 'video', 'audio']):
-            url_match = re.search(r'(https?://(?:www\.)?facebook\.com/reel/\d+|https?://(?:www\.)?facebook\.com/.*/videos/\d+|https?://fb\.watch/[a-zA-Z0-9_-]+)/?', message)
-            if url_match:
-                url = url_match.group(1)
-                media_type = 'audio' if 'audio' in message_lower else 'video'
-                
-                from .ai_engine import AIEngine
-                ai_engine = AIEngine()
-                result = ai_engine.download_media(url, media_type)
-                
-                if result:
-                    return f"✅ Successfully downloaded {media_type} from Facebook!\n📁 Saved to: {result}"
-                else:
-                    return f"❌ Failed to download {media_type} from Facebook. Please check the URL and try again."
+                    return f"❌ Failed to download {media_type} from {platform}. Please check the URL and try again."
 
         # Text analysis
         if message_lower.startswith('analyze text:'):
@@ -503,3 +510,181 @@ class JarvisAssistant:
         except Exception as e:
             print(f"Error adding document to knowledge base: {e}")
             return False
+    
+    def _parse_natural_reminder(self, message: str, user_id: int = None, scheduler_manager=None) -> str:
+        """
+        Parse natural language reminder requests and create reminders.
+        
+        Examples:
+        - "Remind me to pay my bills by 1:30pm today"
+        - "Remind me to call John tomorrow at 2 PM"
+        - "Set a reminder for meeting at 3:00 PM"
+        """
+        try:
+            from datetime import datetime, timedelta
+            import re
+            
+            message_lower = message.lower().strip()
+            
+            # Extract the task/reminder text
+            task_patterns = [
+                r'remind me to (.+?) (?:by|at|on) (.+)',
+                r'remind me to (.+)',
+                r'reminder (?:to )?(.+?) (?:by|at|on) (.+)',
+                r'set (?:a )?reminder (?:for|to) (.+?) (?:by|at|on) (.+)',
+                r'schedule (.+?) (?:for|at) (.+)'
+            ]
+            
+            task_text = None
+            time_text = None
+            
+            for pattern in task_patterns:
+                match = re.search(pattern, message_lower)
+                if match:
+                    if len(match.groups()) == 2:
+                        task_text = match.group(1).strip()
+                        time_text = match.group(2).strip()
+                    else:
+                        task_text = match.group(1).strip()
+                        # Extract time from the rest of the message
+                        time_patterns = [
+                            r'(?:by|at|on) (.+)',
+                            r'(\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM))',
+                            r'(today|tomorrow|tonight)',
+                        ]
+                        for time_pattern in time_patterns:
+                            time_match = re.search(time_pattern, message_lower)
+                            if time_match:
+                                time_text = time_match.group(1).strip()
+                                break
+                    break
+            
+            if not task_text:
+                return "I couldn't understand what you want to be reminded about. Please try: 'Remind me to [task] by [time]'"
+            
+            # Parse time
+            reminder_time = self._parse_time_expression(time_text or 'in 1 hour')
+            
+            if not reminder_time:
+                return f"I couldn't understand the time '{time_text}'. Please use formats like '2:30 PM', 'tomorrow at 3 PM', or 'in 30 minutes'."
+            
+            # If scheduler_manager is provided (from message router), use it for proper reminders
+            if scheduler_manager and user_id:
+                result = scheduler_manager.create_reminder({
+                    'user_id': user_id,
+                    'title': task_text.title(),
+                    'description': f"Reminder: {task_text}",
+                    'reminder_time': reminder_time.isoformat(),
+                    'repeat_pattern': None
+                })
+                
+                if result['success']:
+                    return f"✅ Reminder set! I'll remind you to {task_text} on {reminder_time.strftime('%B %d, %Y at %I:%M %p')}"
+                else:
+                    return f"❌ Failed to set reminder: {result.get('error', 'Unknown error')}"
+            else:
+                # Fallback to task scheduler for basic functionality
+                result = self.task_scheduler.add_task(
+                    title=task_text.title(),
+                    description=f"Reminder: {task_text}",
+                    due_date=reminder_time.strftime('%Y-%m-%d %H:%M'),
+                    priority='medium'
+                )
+                
+                if result['status'] == 'success':
+                    return f"✅ Reminder set! I'll remind you to {task_text} on {reminder_time.strftime('%B %d, %Y at %I:%M %p')}"
+                else:
+                    return f"❌ Failed to set reminder: {result.get('error', 'Unknown error')}"
+                
+        except Exception as e:
+            return f"❌ Error setting reminder: {str(e)}. Please try: 'Remind me to [task] by [time]'"
+    
+    def _parse_time_expression(self, time_text: str) -> Optional[datetime]:
+        """
+        Parse various time expressions into datetime objects.
+        """
+        try:
+            from datetime import datetime, timedelta
+            import re
+            
+            if not time_text:
+                return None
+                
+            time_text = time_text.lower().strip()
+            now = datetime.now()
+            
+            # Handle "today" with time
+            if 'today' in time_text:
+                time_match = re.search(r'(\d{1,2}(?::\d{2})?\s*(?:am|pm))', time_text)
+                if time_match:
+                    time_str = time_match.group(1)
+                    try:
+                        if ':' in time_str:
+                            parsed_time = datetime.strptime(time_str.replace(' ', ''), '%I:%M%p')
+                        else:
+                            parsed_time = datetime.strptime(time_str.replace(' ', ''), '%I%p')
+                        return now.replace(hour=parsed_time.hour, minute=parsed_time.minute, second=0, microsecond=0)
+                    except:
+                        pass
+                else:
+                    # Just "today" without specific time - default to 1 hour from now
+                    return now + timedelta(hours=1)
+            
+            # Handle "tomorrow" with time
+            if 'tomorrow' in time_text:
+                time_match = re.search(r'(\d{1,2}(?::\d{2})?\s*(?:am|pm))', time_text)
+                if time_match:
+                    time_str = time_match.group(1)
+                    try:
+                        if ':' in time_str:
+                            parsed_time = datetime.strptime(time_str.replace(' ', ''), '%I:%M%p')
+                        else:
+                            parsed_time = datetime.strptime(time_str.replace(' ', ''), '%I%p')
+                        tomorrow = now + timedelta(days=1)
+                        return tomorrow.replace(hour=parsed_time.hour, minute=parsed_time.minute, second=0, microsecond=0)
+                    except:
+                        pass
+                else:
+                    # Just "tomorrow" without specific time - default to 9 AM
+                    tomorrow = now + timedelta(days=1)
+                    return tomorrow.replace(hour=9, minute=0, second=0, microsecond=0)
+            
+            # Handle specific times (e.g., "2:30 PM", "1:30pm")
+            time_match = re.search(r'(\d{1,2}(?::\d{2})?\s*(?:am|pm))', time_text)
+            if time_match:
+                time_str = time_match.group(1)
+                try:
+                    if ':' in time_str:
+                        parsed_time = datetime.strptime(time_str.replace(' ', ''), '%I:%M%p')
+                    else:
+                        parsed_time = datetime.strptime(time_str.replace(' ', ''), '%I%p')
+                    
+                    target_time = now.replace(hour=parsed_time.hour, minute=parsed_time.minute, second=0, microsecond=0)
+                    
+                    # If the time has already passed today, schedule for tomorrow
+                    if target_time <= now:
+                        target_time += timedelta(days=1)
+                    
+                    return target_time
+                except:
+                    pass
+            
+            # Handle relative times ("in 30 minutes", "in 2 hours")
+            relative_match = re.search(r'in (\d+)\s*(minute|hour|day)s?', time_text)
+            if relative_match:
+                amount = int(relative_match.group(1))
+                unit = relative_match.group(2)
+                
+                if unit == 'minute':
+                    return now + timedelta(minutes=amount)
+                elif unit == 'hour':
+                    return now + timedelta(hours=amount)
+                elif unit == 'day':
+                    return now + timedelta(days=amount)
+            
+            # Default fallback - 1 hour from now
+            return now + timedelta(hours=1)
+            
+        except Exception as e:
+            print(f"Error parsing time: {e}")
+            return None

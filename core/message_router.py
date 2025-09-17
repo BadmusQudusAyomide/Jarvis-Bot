@@ -25,7 +25,9 @@ class MessageRouter:
             'documents': self._handle_list_documents,
             'reminders': self._handle_list_reminders,
             'setreminder': self._handle_set_reminder,
-            'stats': self._handle_stats
+            'stats': self._handle_stats,
+            'setupsleepwake': self._handle_setup_sleep_wake,
+            'smartreminders': self._handle_setup_sleep_wake
         }
         
         logger.info("Message router initialized")
@@ -310,6 +312,11 @@ class MessageRouter:
         from core.assistant import JarvisAssistant
         assistant = JarvisAssistant()
         
+        # Check if this is a reminder request and handle it specially
+        if content_lower.startswith(('add task', 'schedule task', 'remind me', 'reminder')):
+            user_id = context.get('user_id')
+            return assistant._parse_natural_reminder(content, user_id, self.scheduler)
+        
         return assistant._handle_special_commands(content)
     
     # Command handlers
@@ -325,6 +332,8 @@ class MessageRouter:
 /clear - Clear conversation context
 /documents - List your uploaded documents
 /reminders - Show your reminders
+/setreminder - Set a specific reminder
+/smartreminders - Set up automatic sleep/wake reminders
 /stats - Show usage statistics
 
 **What I can do:**
@@ -333,17 +342,25 @@ class MessageRouter:
 📄 Analyze PDF documents and images
 🎤 Process voice messages
 🖼️ Generate and analyze images
-📅 Manage tasks and reminders
-🎵 Download media from URLs
+📅 Manage tasks and reminders with natural language
+🎵 Download media from TikTok, Instagram, YouTube, Facebook
 🌍 Translate text between languages
+😴 Smart sleep & wake reminders
 
-**Examples:**
+**Natural Language Examples:**
 - "Weather in London"
 - "Latest technology news"
 - "Calculate 15% of 250"
 - "Convert 100 km to miles"
+- "Remind me to pay my bills by 1:30pm today"
 - "Remind me to call John tomorrow at 2 PM"
-- "Generate an image of a sunset"
+- "Download this YouTube video: [URL]"
+- "Download this TikTok: [URL]"
+
+**Smart Features:**
+- Send me any social media URL to download videos/audio
+- Use natural language for reminders (no complex formats needed)
+- Type `/smartreminders` to set up automatic sleep/wake alerts
 
 Just send me a message and I'll help you! 🚀
         """
@@ -512,4 +529,49 @@ Keep chatting to unlock more insights! 🚀
             'content': stats_text,
             'success': True
         }
+    
+    def _handle_setup_sleep_wake(self, user: Dict, content: str) -> Dict:
+        """Handle setup sleep/wake reminders command."""
+        try:
+            success = self.scheduler.setup_smart_sleep_wake_reminders(user['id'])
+            
+            if success:
+                return {
+                    'type': 'text',
+                    'content': '''🌙☀️ **Smart Sleep & Wake Reminders Set Up!**
+
+I've created personalized daily reminders for you:
+
+**Sleep Reminders (8PM - 12AM):**
+🌙 8 PM - Wind-down routine reminder
+🌙 9 PM - Prepare for bed
+🌙 10 PM - Champions need rest
+🌙 11 PM - Recharge time
+🌙 12 AM - Sleep now, conquer tomorrow
+
+**Wake Reminders (5AM - 10AM):**
+☀️ 5 AM - Rise early, win the day
+☀️ 6 AM - Seize the day
+☀️ 7 AM - Goals are waiting
+☀️ 8 AM - Another opportunity
+☀️ 9 AM - Turn dreams to reality
+☀️ 10 AM - Full of possibilities
+
+These will repeat daily to help you maintain a healthy sleep schedule! 💪''',
+                    'success': True
+                }
+            else:
+                return {
+                    'type': 'text',
+                    'content': '❌ Failed to set up sleep/wake reminders. Please try again.',
+                    'success': False
+                }
+                
+        except Exception as e:
+            logger.error(f"Error setting up sleep/wake reminders: {e}")
+            return {
+                'type': 'text',
+                'content': f'❌ Error setting up reminders: {str(e)}',
+                'success': False
+            }
 

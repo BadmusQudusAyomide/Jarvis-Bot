@@ -505,3 +505,73 @@ class SchedulerManager:
                 'repeat_pattern': 'daily'
             }
             self.create_reminder(reminder_data)
+
+    def setup_smart_sleep_wake_reminders(self, user_id: int):
+        """
+        Setup intelligent sleep and wake reminders based on user's request.
+        Sleep reminders: 8PM, 9PM, 10PM, 11PM, 12AM
+        Wake reminders: 5AM, 6AM, 7AM, 8AM, 9AM, 10AM
+        """
+        try:
+            from datetime import datetime
+            
+            # Sleep reminder times (8PM - 12AM)
+            sleep_times = ["20:00", "21:00", "22:00", "23:00", "00:00"]
+            # Wake reminder times (5AM - 10AM)  
+            wake_times = ["05:00", "06:00", "07:00", "08:00", "09:00", "10:00"]
+
+            sleep_messages = [
+                "🌙 It's 8 PM, Badmus. Consider starting your wind-down routine.",
+                "🌙 9 PM - Perfect time to prepare for bed. Your future self will thank you.",
+                "🌙 10 PM - Time to sleep, Badmus. Champions need their rest.",
+                "🌙 11 PM - Your pillow is calling. Time to recharge for tomorrow's victories.",
+                "🌙 Midnight - Sleep now, conquer tomorrow. Your body needs recovery time."
+            ]
+
+            wake_messages = [
+                "☀️ 5 AM - Rise early, win the day! The world belongs to early risers.",
+                "☀️ 6 AM - Good morning, Badmus! Time to seize the day.",
+                "☀️ 7 AM - Wake up, champion! Your goals are waiting for you.",
+                "☀️ 8 AM - Rise and shine! Another opportunity to be great.",
+                "☀️ 9 AM - Morning, Badmus! Time to turn dreams into reality.",
+                "☀️ 10 AM - Good morning! The day is young and full of possibilities."
+            ]
+
+            # Create sleep reminders
+            for i, time_str in enumerate(sleep_times):
+                hour, minute = map(int, time_str.split(':'))
+                reminder_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+                if reminder_time < datetime.now():
+                    reminder_time += timedelta(days=1)
+                
+                reminder_data = {
+                    'user_id': user_id,
+                    'title': 'Sleep Reminder',
+                    'description': sleep_messages[i],
+                    'reminder_time': reminder_time.isoformat(),
+                    'repeat_pattern': 'daily'
+                }
+                self.create_reminder(reminder_data)
+
+            # Create wake reminders
+            for i, time_str in enumerate(wake_times):
+                hour, minute = map(int, time_str.split(':'))
+                reminder_time = datetime.now().replace(hour=hour, minute=minute, second=0, microsecond=0)
+                if reminder_time < datetime.now():
+                    reminder_time += timedelta(days=1)
+                
+                reminder_data = {
+                    'user_id': user_id,
+                    'title': 'Wake Up Reminder',
+                    'description': wake_messages[i],
+                    'reminder_time': reminder_time.isoformat(),
+                    'repeat_pattern': 'daily'
+                }
+                self.create_reminder(reminder_data)
+                
+            logger.info(f"Smart sleep/wake reminders set up for user {user_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error setting up smart sleep/wake reminders: {e}")
+            return False
