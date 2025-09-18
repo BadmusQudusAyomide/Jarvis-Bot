@@ -3,23 +3,14 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
-# Optional imports for speech recognition
-try:
-    import speech_recognition as sr
-    HAS_SPEECH_RECOGNITION = True
-except ImportError:
-    sr = None
-    HAS_SPEECH_RECOGNITION = False
-
-try:
-    from pydub import AudioSegment
-    HAS_PYDUB = True
-except ImportError:
-    AudioSegment = None
-    HAS_PYDUB = False
+# Speech recognition disabled for memory optimization
+HAS_SPEECH_RECOGNITION = False
+HAS_PYDUB = False
+sr = None
+AudioSegment = None
 
 import tempfile
-from .utils import PDFReader, TextToSpeech
+from .utils import PDFReader
 from .web_tools import WebTools
 from .advanced_features import CalculatorTools, TaskScheduler, ImageAnalyzer, TextAnalyzer
 from dotenv import load_dotenv
@@ -41,13 +32,9 @@ class JarvisAssistant:
         self.model = genai.GenerativeModel('gemini-1.5-flash')
         
         self.pdf_reader = PDFReader()
-        self.tts = TextToSpeech()
         
-        # Initialize speech recognizer only if available
-        if HAS_SPEECH_RECOGNITION and sr:
-            self.recognizer = sr.Recognizer()
-        else:
-            self.recognizer = None
+        # Speech recognition and TTS disabled for memory optimization
+        self.recognizer = None
             
         self.knowledge_base_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'knowledge_base')
         
@@ -196,124 +183,20 @@ class JarvisAssistant:
             return f"I apologize, but I encountered an error processing your message: {str(e)}"
     
     def process_voice_message(self, audio_file_path: str) -> tuple[str, str]:
-        """
-        Process a voice message and return both transcription and AI response.
-        
-        Args:
-            audio_file_path (str): Path to the audio file
-            
-        Returns:
-            tuple: (transcribed_text, ai_response)
-        """
-        try:
-            # Convert audio to text
-            transcribed_text = self._voice_to_text(audio_file_path)
-            
-            if not transcribed_text:
-                return "Could not understand the audio.", "Please try speaking more clearly or send a text message."
-            
-            # Process the transcribed text
-            ai_response = self.process_text_message(transcribed_text)
-            
-            return transcribed_text, ai_response
-            
-        except Exception as e:
-            return "Error processing voice message.", f"I encountered an error: {str(e)}"
+        """Voice processing disabled for memory optimization."""
+        return "Voice processing disabled.", "Please send text messages only. Voice features are disabled to optimize memory usage."
     
     def generate_voice_response(self, text: str) -> Optional[str]:
-        """
-        Convert text response to speech and return audio file path.
-        
-        Args:
-            text (str): Text to convert to speech
-            
-        Returns:
-            str: Path to generated audio file, or None if failed
-        """
-        try:
-            return self.tts.text_to_speech(text)
-        except Exception as e:
-            print(f"Error generating voice response: {e}")
-            return None
+        """Voice generation disabled for memory optimization."""
+        return None
     
     def _voice_to_text(self, audio_file_path: str) -> Optional[str]:
-        """
-        Convert audio file to text using speech recognition.
-        
-        Args:
-            audio_file_path (str): Path to audio file
-            
-        Returns:
-            str: Transcribed text or None if failed
-        """
-        try:
-            # Check if speech recognition is available
-            if not HAS_SPEECH_RECOGNITION or not self.recognizer or not HAS_PYDUB:
-                print("Speech recognition not available - dependencies missing")
-                return None
-            
-            # Convert audio to WAV format if needed
-            audio = AudioSegment.from_file(audio_file_path)
-            
-            # Create temporary WAV file
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_wav:
-                audio.export(temp_wav.name, format="wav")
-                
-                # Use speech recognition
-                with sr.AudioFile(temp_wav.name) as source:
-                    audio_data = self.recognizer.record(source)
-                    text = self.recognizer.recognize_google(audio_data)
-                    
-                # Clean up temporary file
-                os.unlink(temp_wav.name)
-                
-                return text
-                
-        except sr.UnknownValueError:
-            return None
-        except sr.RequestError as e:
-            print(f"Speech recognition error: {e}")
-            return None
-        except Exception as e:
-            print(f"Error in voice to text conversion: {e}")
-            return None
+        """Voice to text disabled for memory optimization."""
+        return None
     
     def _search_knowledge_base(self, query: str) -> str:
-        """
-        Search through PDF documents in knowledge base for relevant information.
-        
-        Args:
-            query (str): Search query
-            
-        Returns:
-            str: Relevant context from knowledge base
-        """
-        try:
-            relevant_content = []
-            
-            # Get all PDF files in knowledge base
-            for filename in os.listdir(self.knowledge_base_path):
-                if filename.lower().endswith('.pdf'):
-                    file_path = os.path.join(self.knowledge_base_path, filename)
-                    content = self.pdf_reader.extract_text(file_path)
-                    
-                    # Simple keyword matching (can be improved with vector search)
-                    if any(keyword.lower() in content.lower() for keyword in query.split()):
-                        # Get relevant excerpt (first 500 chars containing keywords)
-                        words = content.split()
-                        for i, word in enumerate(words):
-                            if any(keyword.lower() in word.lower() for keyword in query.split()):
-                                start = max(0, i - 50)
-                                end = min(len(words), i + 50)
-                                excerpt = ' '.join(words[start:end])
-                                relevant_content.append(f"From {filename}: {excerpt}")
-                                break
-            
-            return '\n\n'.join(relevant_content[:3])  # Limit to 3 most relevant excerpts
-            
-        except Exception as e:
-            print(f"Error searching knowledge base: {e}")
-            return ""
+        """Advanced document search disabled for memory optimization."""
+        return ""
     
     def _build_system_prompt(self, knowledge_context: str = "") -> str:
         """

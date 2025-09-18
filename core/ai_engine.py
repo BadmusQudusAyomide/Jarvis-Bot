@@ -5,21 +5,6 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 
 
-# Conditional sentence transformers import
-try:
-    if not os.getenv('DISABLE_SENTENCE_TRANSFORMERS', 'false').lower() == 'true':
-        from sentence_transformers import SentenceTransformer
-        import numpy as np
-        HAS_SENTENCE_TRANSFORMERS = True
-    else:
-        SentenceTransformer = None
-        np = None
-        HAS_SENTENCE_TRANSFORMERS = False
-except ImportError:
-    HAS_SENTENCE_TRANSFORMERS = False
-    SentenceTransformer = None
-    np = None
-
 try:
     from PIL import Image
     HAS_PIL = True
@@ -27,17 +12,12 @@ except ImportError:
     HAS_PIL = False
     Image = None
 
-# Conditional imports based on memory optimization
-try:
-    if not os.getenv('DISABLE_WHISPER', 'false').lower() == 'true':
-        import whisper
-        HAS_WHISPER = True
-    else:
-        whisper = None
-        HAS_WHISPER = False
-except ImportError:
-    HAS_WHISPER = False
-    whisper = None
+# Disable memory-heavy features for deployment
+HAS_SENTENCE_TRANSFORMERS = False
+HAS_WHISPER = False
+SentenceTransformer = None
+np = None
+whisper = None
 
 try:
     import yt_dlp
@@ -87,30 +67,25 @@ class AIEngine:
         
         # Initialize embeddings model (can be disabled via env)
         self.embedding_model = None
-        disable_embeddings = os.getenv('DISABLE_EMBEDDINGS', 'false').lower() in ('1', 'true', 'yes')
-        disable_sentence_transformers = os.getenv('DISABLE_SENTENCE_TRANSFORMERS', 'false').lower() in ('1', 'true', 'yes')
-        
-        if not disable_embeddings and not disable_sentence_transformers and HAS_SENTENCE_TRANSFORMERS and SentenceTransformer:
-            try:
-                self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-                logger.info("Sentence transformer model loaded successfully")
-            except Exception as e:
-                logger.warning(f"Failed to load sentence transformer: {e}")
-                self.embedding_model = None
-        else:
-            logger.info("Sentence transformers disabled for memory optimization")
+        if os.getenv('DISABLE_EMBEDDINGS', 'false').lower() not in ('1', 'true', 'yes'):
+            if HAS_SENTENCE_TRANSFORMERS:
+                try:
+                    self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+                except Exception as e:
+                    logger.warning(f"Failed to load sentence transformer: {e}")
+                    self.embedding_model = None
+            else:
+                logger.warning("Sentence transformers not available. Semantic search disabled.")
         
         # Initialize Whisper for speech-to-text (can be disabled via env)
         self.whisper_model = None
-        if os.getenv('DISABLE_WHISPER', 'false').lower() not in ('1', 'true', 'yes') and HAS_WHISPER and whisper:
+        if os.getenv('DISABLE_WHISPER', 'false').lower() not in ('1', 'true', 'yes'):
             try:
                 self.whisper_model = whisper.load_model("base")
                 logger.info("Whisper model loaded successfully")
             except Exception as e:
                 logger.error(f"Failed to load Whisper model: {e}")
                 self.whisper_model = None
-        else:
-            logger.info("Whisper disabled for memory optimization")
         
         # Document storage
         self.documents_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'documents')
@@ -238,50 +213,12 @@ class AIEngine:
             return documents[:top_k]
     
     def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
-        """Calculate cosine similarity between two vectors."""
-        try:
-            if np is None:
-                # Fallback calculation without numpy
-                dot_product = sum(x * y for x, y in zip(a, b))
-                norm_a = sum(x * x for x in a) ** 0.5
-                norm_b = sum(x * x for x in b) ** 0.5
-                return dot_product / (norm_a * norm_b) if norm_a * norm_b > 0 else 0.0
-            
-            a = np.array(a)
-            b = np.array(b)
-            return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-        except:
-            return 0.0
+        """Cosine similarity disabled for memory optimization."""
+        return 0.0
     
     def transcribe_audio(self, audio_path: str) -> Tuple[str, bool]:
-        """
-        Transcribe audio file to text using Whisper.
-        
-        Args:
-            audio_path (str): Path to audio file
-            
-        Returns:
-            Tuple[str, bool]: (transcribed_text, success)
-        """
-        try:
-            if not HAS_WHISPER or whisper is None:
-                return "Voice processing disabled for memory optimization. Please use text messages.", False
-            
-            # Load and transcribe audio
-            model = whisper.load_model("base")
-            result = model.transcribe(audio_path)
-            
-            transcribed_text = result["text"].strip()
-            
-            if not transcribed_text:
-                return "Could not transcribe audio - no speech detected", False
-            
-            logger.info(f"Successfully transcribed audio: {transcribed_text[:100]}...")
-            return transcribed_text, True
-            
-        except Exception as e:
-            logger.error(f"Error transcribing audio: {e}")
-            return f"Voice processing unavailable: {str(e)}", False
+        """Audio transcription disabled for memory optimization."""
+        return "Audio transcription disabled for memory optimization. Please send text messages only.", False
     
     def generate_image(self, prompt: str, size: str = "1024x1024") -> Optional[str]:
         """
