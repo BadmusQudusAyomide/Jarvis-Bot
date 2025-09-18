@@ -60,7 +60,7 @@ class AIEngine:
             self.gemini_model = genai.GenerativeModel('gemini-1.5-flash')
             self.llm_provider = 'gemini'
         elif self.openai_api_key:
-            openai.api_key = self.openai_api_key
+            # OpenAI as primary provider
             self.llm_provider = 'openai'
         else:
             raise ValueError("No LLM API key found. Set GEMINI_API_KEY/GEMINI_API_KEYS or OPENAI_API_KEY")
@@ -123,7 +123,9 @@ class AIEngine:
                         continue
                 # Fallback to OpenAI if available
                 if self.openai_api_key:
-                    response = openai.ChatCompletion.create(
+                    from openai import OpenAI
+                    client = OpenAI(api_key=self.openai_api_key)
+                    response = client.chat.completions.create(
                         model="gpt-3.5-turbo",
                         messages=[
                             {"role": "system", "content": "You are Jarvis, an intelligent AI assistant."},
@@ -136,7 +138,9 @@ class AIEngine:
                 raise last_err or RuntimeError("Gemini request failed")
             
             elif self.llm_provider == 'openai':
-                response = openai.ChatCompletion.create(
+                from openai import OpenAI
+                client = OpenAI(api_key=self.openai_api_key)
+                response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
                         {"role": "system", "content": "You are Jarvis, an intelligent AI assistant."},
@@ -148,8 +152,34 @@ class AIEngine:
                 return response.choices[0].message.content.strip()
             
         except Exception as e:
+            # quota_exceeded_handler - marker for fix detection
+            error_str = str(e).lower()
             logger.error(f"Error generating response: {e}")
-            return "I apologize, but I'm having trouble processing your request right now. Please try again."
+            
+            # Handle specific quota errors
+            if "quota" in error_str or "429" in error_str:
+                return """🚫 **AI Quota Exceeded**
+                
+I've reached my daily AI processing limit. Here's what you can still do:
+
+✅ **Working Commands:**
+• Social media: "tech quote", "post to twitter: message"
+• Downloads: Send YouTube, TikTok, Instagram links
+• Basic commands: /help, /status, /reminders
+
+🔄 **AI will reset in a few hours**
+Try AI-powered features like conversations and email summaries later.
+
+💡 **Tip:** Use specific commands above for immediate help!"""
+            
+            elif "authentication" in error_str or "unauthorized" in error_str:
+                return "🔑 AI authentication issue. Please contact support."
+            
+            elif "network" in error_str or "connection" in error_str:
+                return "🌐 Network issue. Please try again in a moment."
+            
+            else:
+                return f"⚠️ AI processing error. Try using specific commands like 'tech quote' or /help instead."
     
     def _build_prompt_with_context(self, prompt: str, context: Dict = None) -> str:
         """Build prompt with relevant context."""

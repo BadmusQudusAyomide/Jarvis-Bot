@@ -129,8 +129,15 @@ class SocialMediaManager:
             }
             
         except Exception as e:
-            logger.error(f"Failed to post to Twitter: {e}")
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Failed to post to Twitter: {e}", exc_info=True)
+            error_msg = str(e)
+            if "401" in error_msg or "Unauthorized" in error_msg:
+                error_msg = "Twitter API authentication failed. Please check your API keys."
+            elif "403" in error_msg or "Forbidden" in error_msg:
+                error_msg = "Twitter API access denied. Check your app permissions."
+            elif "429" in error_msg or "rate limit" in error_msg.lower():
+                error_msg = "Twitter API rate limit exceeded. Please try again later."
+            return {'success': False, 'error': error_msg}
     
     def post_to_facebook(self, content: str, user_id: int = None) -> Dict:
         """Post content to Facebook."""

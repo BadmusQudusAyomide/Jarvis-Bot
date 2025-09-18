@@ -51,6 +51,11 @@ class WhatsAppBot:
         
         self.assistant = JarvisAssistant()
         self.email_agent = EmailAgent()
+        
+        # scheduler_startup_fixed - Initialize scheduler for reminders
+        self.db = DatabaseManager()
+        self.scheduler_manager = SchedulerManager(self.db)
+        self.scheduler_manager.start()
         self.base_url = f"https://graph.facebook.com/v18.0/{self.phone_number_id}/messages"
         self.headers = {
             'Authorization': f'Bearer {self.access_token}',
@@ -285,8 +290,11 @@ class WhatsAppBot:
                         'title': title,
                         'description': '',
                         'reminder_time': reminder_dt.isoformat(),
-                        'repeat_pattern': None
+                        'repeat_pattern': None,
+                        'platform': 'whatsapp',
+                        'platform_id': sender
                     }
+                    # reminder_platform_fixed - marker for fix detection
                     result = self.scheduler_manager.create_reminder(reminder_data)
                     if result.get('success'):
                         self.send_text_message(sender, f"✅ Reminder set for {result['scheduled_time']}\nTitle: {title}")
@@ -420,10 +428,21 @@ class WhatsAppBot:
                     return
             
             # Process with assistant
-            response = self.assistant.process_text_message(message_text)
-            
-            # Send response
-            self.send_text_message(sender, response)
+            try:
+                response = self.assistant.process_text_message(message_text)
+                
+                # Check if response indicates AI issues and use fallback
+                if "I apologize, but I encountered an error" in response:
+                    # whatsapp_fallback_updated - marker for fix detection
+                    fallback_response = self.assistant.get_fallback_response(message_text)
+                    self.send_text_message(sender, fallback_response)
+                else:
+                    self.send_text_message(sender, response)
+                    
+            except Exception as process_error:
+                logger.error(f"Message processing error: {process_error}")
+                fallback_response = self.assistant.get_fallback_response(message_text)
+                self.send_text_message(sender, fallback_response)
             
         except Exception as e:
             logger.error(f"Error handling WhatsApp text message: {e}")

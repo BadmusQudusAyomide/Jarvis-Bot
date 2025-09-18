@@ -274,6 +274,19 @@ class SchedulerManager:
             if not access_token or not phone_number_id:
                 logger.warning("WhatsApp credentials missing; cannot send WhatsApp reminder.")
                 return
+            
+            # Format phone number correctly for WhatsApp API
+            # Remove any non-digit characters and ensure it starts with country code
+            clean_number = ''.join(filter(str.isdigit, phone_number))
+            if not clean_number.startswith('234') and len(clean_number) == 11:
+                # Nigerian number without country code
+                clean_number = '234' + clean_number[1:]
+            elif not clean_number.startswith('234') and len(clean_number) == 10:
+                # Nigerian number without country code and leading 0
+                clean_number = '234' + clean_number
+            
+            logger.info(f"Sending WhatsApp reminder to: {clean_number}")
+            
             base_url = f"https://graph.facebook.com/v18.0/{phone_number_id}/messages"
             headers = {
                 'Authorization': f'Bearer {access_token}',
@@ -281,12 +294,14 @@ class SchedulerManager:
             }
             payload = {
                 "messaging_product": "whatsapp",
-                "to": phone_number,
+                "to": clean_number,
                 "type": "text",
                 "text": {"body": message}
             }
             resp = requests.post(base_url, headers=headers, json=payload, timeout=15)
-            if resp.status_code != 200:
+            if resp.status_code == 200:
+                logger.info(f"WhatsApp reminder sent successfully to {clean_number}")
+            else:
                 logger.error(f"WhatsApp reminder send failed: {resp.text}")
         except Exception as e:
             logger.error(f"Error sending WhatsApp reminder: {e}")

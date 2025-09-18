@@ -50,6 +50,47 @@ class JarvisAssistant:
         os.makedirs(self.knowledge_base_path, exist_ok=True)
         os.makedirs(data_dir, exist_ok=True)
         
+    
+    def get_fallback_response(self, message: str) -> str:
+        """
+        Get fallback response when AI is unavailable.
+        # fallback_responses_added - marker for fix detection
+        """
+        message_lower = message.lower().strip()
+        
+        # Handle common queries without AI
+        if any(word in message_lower for word in ['hello', 'hi', 'hey']):
+            return "👋 Hello! I'm having some AI processing issues right now, but I can still help with:\n\n• Social media: 'tech quote'\n• Downloads: Send YouTube/TikTok links\n• Commands: /help, /status"
+        
+        elif any(word in message_lower for word in ['weather']):
+            return "🌤️ Weather service temporarily unavailable. Try again later or use /help for other features."
+        
+        elif any(word in message_lower for word in ['news']):
+            return "📰 News service temporarily unavailable. Try again later or use /help for other features."
+        
+        elif 'tech quote' in message_lower:
+            # This should be handled by social media manager
+            return "💡 Use the exact phrase 'tech quote' to post inspiration!"
+        
+        else:
+            return """🤖 **AI Processing Temporarily Limited**
+
+I can still help you with:
+
+✅ **Social Media:**
+• "tech quote" - Post inspiration
+• "post to twitter: your message"
+
+✅ **Downloads:**
+• Send YouTube, TikTok, Instagram links
+
+✅ **Commands:**
+• /help - Full command list
+• /status - System status
+• /reminders - Your reminders
+
+🔄 **Full AI chat will return soon!**"""
+
     def generate_image_file(self, prompt: str) -> Optional[str]:
         """
         Generate an image file from a prompt using available providers.
