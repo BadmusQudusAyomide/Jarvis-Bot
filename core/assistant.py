@@ -2,8 +2,22 @@ import google.generativeai as genai
 import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-import speech_recognition as sr
-from pydub import AudioSegment
+
+# Optional imports for speech recognition
+try:
+    import speech_recognition as sr
+    HAS_SPEECH_RECOGNITION = True
+except ImportError:
+    sr = None
+    HAS_SPEECH_RECOGNITION = False
+
+try:
+    from pydub import AudioSegment
+    HAS_PYDUB = True
+except ImportError:
+    AudioSegment = None
+    HAS_PYDUB = False
+
 import tempfile
 from .utils import PDFReader, TextToSpeech
 from .web_tools import WebTools
@@ -28,7 +42,13 @@ class JarvisAssistant:
         
         self.pdf_reader = PDFReader()
         self.tts = TextToSpeech()
-        self.recognizer = sr.Recognizer()
+        
+        # Initialize speech recognizer only if available
+        if HAS_SPEECH_RECOGNITION and sr:
+            self.recognizer = sr.Recognizer()
+        else:
+            self.recognizer = None
+            
         self.knowledge_base_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'knowledge_base')
         
         # Initialize new tools
@@ -227,6 +247,11 @@ class JarvisAssistant:
             str: Transcribed text or None if failed
         """
         try:
+            # Check if speech recognition is available
+            if not HAS_SPEECH_RECOGNITION or not self.recognizer or not HAS_PYDUB:
+                print("Speech recognition not available - dependencies missing")
+                return None
+            
             # Convert audio to WAV format if needed
             audio = AudioSegment.from_file(audio_file_path)
             
