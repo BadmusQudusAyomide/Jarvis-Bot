@@ -240,6 +240,13 @@ class AIEngine:
     def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
         """Calculate cosine similarity between two vectors."""
         try:
+            if np is None:
+                # Fallback calculation without numpy
+                dot_product = sum(x * y for x, y in zip(a, b))
+                norm_a = sum(x * x for x in a) ** 0.5
+                norm_b = sum(x * x for x in b) ** 0.5
+                return dot_product / (norm_a * norm_b) if norm_a * norm_b > 0 else 0.0
+            
             a = np.array(a)
             b = np.array(b)
             return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
