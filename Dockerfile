@@ -32,8 +32,8 @@ RUN apt-get update && apt-get install -y \
     libespeak1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file first for better caching (use a slim set for deploy)
-ARG REQS_FILE=requirements_minimal.txt
+# Copy requirements file first for better caching (use memory-optimized set for deploy)
+ARG REQS_FILE=requirements_memory_optimized.txt
 COPY ${REQS_FILE} /app/requirements.txt
 
 # Install Python dependencies
@@ -49,9 +49,12 @@ RUN mkdir -p data/documents/telegram_uploads data/knowledge_base
 ENV PORT=5000
 EXPOSE 5000
 
-# Default to disabling heavy models in container
-ENV DISABLE_EMBEDDINGS=true
+# Memory optimization for Render free tier
+ENV DISABLE_SENTENCE_TRANSFORMERS=true
 ENV DISABLE_WHISPER=true
+ENV DISABLE_VOICE_PROCESSING=true
+ENV ENABLE_EMBEDDINGS=true
+ENV MEMORY_OPTIMIZED=true
 
 # Command to run the application via WSGI entrypoint
 CMD gunicorn wsgi:app --bind 0.0.0.0:$PORT --timeout 120

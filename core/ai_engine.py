@@ -5,10 +5,16 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 
 
+# Conditional sentence transformers import
 try:
-    from sentence_transformers import SentenceTransformer
-    import numpy as np
-    HAS_SENTENCE_TRANSFORMERS = True
+    if not os.getenv('DISABLE_SENTENCE_TRANSFORMERS', 'false').lower() == 'true':
+        from sentence_transformers import SentenceTransformer
+        import numpy as np
+        HAS_SENTENCE_TRANSFORMERS = True
+    else:
+        SentenceTransformer = None
+        np = None
+        HAS_SENTENCE_TRANSFORMERS = False
 except ImportError:
     HAS_SENTENCE_TRANSFORMERS = False
     SentenceTransformer = None
@@ -21,9 +27,14 @@ except ImportError:
     HAS_PIL = False
     Image = None
 
+# Conditional imports based on memory optimization
 try:
-    import whisper
-    HAS_WHISPER = True
+    if not os.getenv('DISABLE_WHISPER', 'false').lower() == 'true':
+        import whisper
+        HAS_WHISPER = True
+    else:
+        whisper = None
+        HAS_WHISPER = False
 except ImportError:
     HAS_WHISPER = False
     whisper = None
@@ -76,25 +87,30 @@ class AIEngine:
         
         # Initialize embeddings model (can be disabled via env)
         self.embedding_model = None
-        if os.getenv('DISABLE_EMBEDDINGS', 'false').lower() not in ('1', 'true', 'yes'):
-            if HAS_SENTENCE_TRANSFORMERS:
-                try:
-                    self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-                except Exception as e:
-                    logger.warning(f"Failed to load sentence transformer: {e}")
-                    self.embedding_model = None
-            else:
-                logger.warning("Sentence transformers not available. Semantic search disabled.")
+        disable_embeddings = os.getenv('DISABLE_EMBEDDINGS', 'false').lower() in ('1', 'true', 'yes')
+        disable_sentence_transformers = os.getenv('DISABLE_SENTENCE_TRANSFORMERS', 'false').lower() in ('1', 'true', 'yes')
+        
+        if not disable_embeddings and not disable_sentence_transformers and HAS_SENTENCE_TRANSFORMERS and SentenceTransformer:
+            try:
+                self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+                logger.info("Sentence transformer model loaded successfully")
+            except Exception as e:
+                logger.warning(f"Failed to load sentence transformer: {e}")
+                self.embedding_model = None
+        else:
+            logger.info("Sentence transformers disabled for memory optimization")
         
         # Initialize Whisper for speech-to-text (can be disabled via env)
         self.whisper_model = None
-        if os.getenv('DISABLE_WHISPER', 'false').lower() not in ('1', 'true', 'yes'):
+        if os.getenv('DISABLE_WHISPER', 'false').lower() not in ('1', 'true', 'yes') and HAS_WHISPER and whisper:
             try:
                 self.whisper_model = whisper.load_model("base")
                 logger.info("Whisper model loaded successfully")
             except Exception as e:
                 logger.error(f"Failed to load Whisper model: {e}")
                 self.whisper_model = None
+        else:
+            logger.info("Whisper disabled for memory optimization")
         
         # Document storage
         self.documents_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'documents')
@@ -232,7 +248,7 @@ class AIEngine:
     
     def transcribe_audio(self, audio_path: str) -> Tuple[str, bool]:
         """
-        Transcribe audio using Whisper.
+        Transcribe audio file to text using Whisper.
         
         Args:
             audio_path (str): Path to audio file
@@ -240,23 +256,25 @@ class AIEngine:
         Returns:
             Tuple[str, bool]: (transcribed_text, success)
         """
-        if not self.whisper_model:
-            return "Speech recognition not available", False
-        
-        if not HAS_WHISPER:
-            logger.warning("Whisper not available for speech-to-text")
-            return None
-            
         try:
-            # Load Whisper model
-            model = whisper.load_model("base")
+            if not HAS_WHISPER or whisper is None:
+                return "Voice processing disabled for memory optimization. Please use text messages.", False
             
-            # Transcribe audio
+            # Load and transcribe audio
+            model = whisper.load_model("base")
             result = model.transcribe(audio_path)
-            return result["text"]
+            
+            transcribed_text = result["text"].strip()
+            
+            if not transcribed_text:
+                return "Could not transcribe audio - no speech detected", False
+            
+            logger.info(f"Successfully transcribed audio: {transcribed_text[:100]}...")
+            return transcribed_text, True
+            
         except Exception as e:
             logger.error(f"Error transcribing audio: {e}")
-            return None
+            return f"Voice processing unavailable: {str(e)}", False
     
     def generate_image(self, prompt: str, size: str = "1024x1024") -> Optional[str]:
         """
