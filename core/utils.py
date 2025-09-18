@@ -1,8 +1,9 @@
 import PyPDF2
-import pyttsx3
 import os
 import tempfile
 from typing import Optional
+
+# Text-to-speech disabled for memory optimization
 
 class PDFReader:
     """
@@ -66,109 +67,26 @@ class PDFReader:
 
 
 class TextToSpeech:
-    """
-    Utility class for converting text to speech audio files.
-    """
+    """Text-to-speech disabled for memory optimization."""
     
     def __init__(self):
-        self.engine = pyttsx3.init()
-        self._configure_voice()
-    
-    def _configure_voice(self):
-        """
-        Configure the TTS engine with optimal settings.
-        """
-        try:
-            # Get available voices
-            voices = self.engine.getProperty('voices')
-            
-            # Try to set a female voice if available
-            for voice in voices:
-                if 'female' in voice.name.lower() or 'zira' in voice.name.lower():
-                    self.engine.setProperty('voice', voice.id)
-                    break
-            
-            # Set speech rate (words per minute)
-            self.engine.setProperty('rate', 180)
-            
-            # Set volume (0.0 to 1.0)
-            self.engine.setProperty('volume', 0.9)
-            
-        except Exception as e:
-            print(f"Error configuring TTS voice: {e}")
+        pass
     
     def text_to_speech(self, text: str, output_path: Optional[str] = None) -> Optional[str]:
-        """
-        Convert text to speech and save as audio file.
-        
-        Args:
-            text (str): Text to convert to speech
-            output_path (str, optional): Path to save audio file. If None, creates temp file.
-            
-        Returns:
-            str: Path to the generated audio file, or None if failed
-        """
-        try:
-            if not output_path:
-                # Create temporary file
-                temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-                output_path = temp_file.name
-                temp_file.close()
-            
-            # Save speech to file
-            self.engine.save_to_file(text, output_path)
-            self.engine.runAndWait()
-            
-            return output_path
-            
-        except Exception as e:
-            print(f"Error converting text to speech: {e}")
-            return None
+        """Text-to-speech disabled for memory optimization."""
+        return None
     
     def speak_text(self, text: str):
-        """
-        Speak text directly without saving to file.
-        
-        Args:
-            text (str): Text to speak
-        """
-        try:
-            self.engine.say(text)
-            self.engine.runAndWait()
-        except Exception as e:
-            print(f"Error speaking text: {e}")
+        """Text-to-speech disabled for memory optimization."""
+        pass
     
     def set_voice_properties(self, rate: int = 180, volume: float = 0.9, voice_id: Optional[str] = None):
-        """
-        Customize voice properties.
-        
-        Args:
-            rate (int): Speech rate in words per minute
-            volume (float): Volume level (0.0 to 1.0)
-            voice_id (str, optional): Specific voice ID to use
-        """
-        try:
-            self.engine.setProperty('rate', rate)
-            self.engine.setProperty('volume', volume)
-            
-            if voice_id:
-                self.engine.setProperty('voice', voice_id)
-                
-        except Exception as e:
-            print(f"Error setting voice properties: {e}")
+        """Text-to-speech disabled for memory optimization."""
+        pass
     
     def get_available_voices(self) -> list:
-        """
-        Get list of available voices on the system.
-        
-        Returns:
-            list: List of available voice objects
-        """
-        try:
-            return self.engine.getProperty('voices')
-        except Exception as e:
-            print(f"Error getting available voices: {e}")
-            return []
+        """Text-to-speech disabled for memory optimization."""
+        return []
 
 
 class AudioProcessor:
